@@ -1,5 +1,4 @@
 from math import exp
-
 from keras.callbacks import Callback, LearningRateScheduler
 import numpy as np
 
