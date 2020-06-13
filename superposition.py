@@ -1,4 +1,6 @@
 import tensorflow as tf
+from callbacks import *
+from help_functions import *
 from networks import *
 from dataset_preparation import get_dataset
 
@@ -15,8 +17,9 @@ if __name__ == '__main__':
     num_of_units = 1000
     num_of_classes = 10
 
+    num_of_tasks = 3
     num_of_epochs = 10
-    batch_size = 50
+    batch_size = 600
 
     d = get_dataset(dataset, nn_cnn, input_size, num_of_classes)
     X_train, y_train, X_test, y_test = d[0]
@@ -27,3 +30,5 @@ if __name__ == '__main__':
         model = cnn(input_size, num_of_classes)
 
     history = model.fit(X_train, y_train, epochs=num_of_epochs, batch_size=batch_size, verbose=2, validation_split=0.1)
+
+
