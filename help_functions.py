@@ -120,5 +120,14 @@ def context_multiplication_CNN(model, context_matrices, task_index):
             layer.set_weights([new_w, curr_w_bias])
 
 
+def print_validation_acc(history, task_index):
+    """
+    Print validation accuracy over epochs.
 
+    :param history: Keras History object
+    :param task_index: index of a task to know which context_matrices row to use
+    :return: None
+    """
+    val_acc = np.array(history.history['val_accuracy']) * 100
+    print('\nValidation accuracies: i =', task_index, val_acc)
 
