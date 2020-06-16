@@ -1,7 +1,6 @@
 from math import exp
-from keras.callbacks import Callback, LearningRateScheduler
+from keras.callbacks import Callback
 import numpy as np
-from plots import plot_lr
 
 
 class TestPerformanceCallback(Callback):
@@ -22,7 +21,7 @@ class TestPerformanceCallback(Callback):
 
 class TestSuperpositionPerformanceCallback(Callback):
     """
-    Callback class for testing superposition model performance at the beginning of every epoch.
+    Callback class for testing superposition NN model performance at the beginning of every epoch.
     """
     def __init__(self, X_test, y_test, context_matrices, model, task_index):
         super().__init__()
@@ -53,7 +52,7 @@ class TestSuperpositionPerformanceCallback(Callback):
             context_inverse_multiplied = self.context_matrices[self.task_index][i]
             for task_i in range(self.task_index - 1, 0, -1):
                 context_inverse_multiplied = np.multiply(context_inverse_multiplied, self.context_matrices[task_i][i])
-            context_inverse_multiplied = np.diag(context_inverse_multiplied)
+            context_inverse_multiplied = np.diag(context_inverse_multiplied)    # vector to diagonal matrix
 
             layer.set_weights([context_inverse_multiplied @ curr_w_matrices[i], curr_bias_vectors[i]])
 
@@ -64,6 +63,68 @@ class TestSuperpositionPerformanceCallback(Callback):
         # change model weights back (without bias node)
         for i, layer in enumerate(self.model.layers[1:]):  # first layer is Flatten so we skip it
             layer.set_weights([curr_w_matrices[i], curr_bias_vectors[i]])
+
+
+class TestSuperpositionPerformanceCallback_CNN(Callback):
+    """
+    Callback class for testing superposition CNN model performance at the beginning of every epoch.
+    """
+    def __init__(self, X_test, y_test, context_matrices, model, task_index):
+        super().__init__()
+        self.X_test = X_test
+        self.y_test = y_test
+        self.context_matrices = context_matrices
+        self.model = model  # this is only a reference, not a deep copy
+        self.task_index = task_index
+        self.accuracies = []
+
+    def on_epoch_begin(self, epoch, logs=None):
+        if self.task_index == 0:    # first task - we did not use context yet
+            loss, accuracy = self.model.evaluate(self.X_test, self.y_test, verbose=2)
+            self.accuracies.append(accuracy * 100)
+            return
+
+        # save current model weights (without bias node)
+        curr_w_matrices = []
+        curr_bias_vectors = []
+        for i, layer in enumerate(self.model.layers):
+            if i < 2 or i > 3:  # conv or dense layer
+                curr_w_matrices.append(layer.get_weights()[0])
+                curr_bias_vectors.append(layer.get_weights()[1])
+
+        # temporarily change model weights to be suitable for first task (without bias node)
+        for i, layer in enumerate(self.model.layers):
+            if i < 2 or i > 3:  # conv or dense layer
+                # not multiplying with inverse because inverse is the same in binary superposition with {-1, 1} on the diagonal
+                # using only element-wise multiplication on diagonal vectors for speed-up
+
+                if i < 2:  # conv layer
+                    # flatten
+                    context_vector = self.context_matrices[self.task_index][i]
+                    for task_i in range(self.task_index - 1, 0, -1):
+                        context_vector = np.multiply(context_vector, self.context_matrices[task_i][i])
+
+                    new_w = np.reshape(np.multiply(curr_w_matrices[i].flatten(), context_vector), curr_w_matrices[i].shape)
+                    layer.set_weights([new_w, curr_bias_vectors[i]])
+                else:  # dense layer
+                    context_inverse_multiplied = self.context_matrices[self.task_index][i - 2]
+                    for task_i in range(self.task_index - 1, 0, -1):
+                        context_inverse_multiplied = np.multiply(context_inverse_multiplied, self.context_matrices[task_i][i - 2])
+                    context_inverse_multiplied = np.diag(context_inverse_multiplied)    # vector to diagonal matrix
+
+                    layer.set_weights([context_inverse_multiplied @ curr_w_matrices[i - 2], curr_bias_vectors[i - 2]])
+
+        # evaluate accuracy
+        loss, accuracy = self.model.evaluate(self.X_test, self.y_test, verbose=2)
+        self.accuracies.append(accuracy * 100)
+
+        # change model weights back (without bias node)
+        for i, layer in enumerate(self.model.layers):
+            if i < 2 or i > 3:  # conv or dense layer
+                if i < 2:  # conv layer
+                    layer.set_weights([curr_w_matrices[i], curr_bias_vectors[i]])
+                else:  # dense layer
+                    layer.set_weights([curr_w_matrices[i - 2], curr_bias_vectors[i - 2]])
 
 
 lr_over_time = []   # global variable to store changing learning rates
