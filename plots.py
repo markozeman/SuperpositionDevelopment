@@ -34,3 +34,18 @@ def plot_general(line_1, line_2, legend_lst, title, x_label, y_label, vertical_l
             plt.text(vertical_lines_x[i] + 0.25, vl_min, text_strings[i], colors='k', alpha=0.5)
     plt.show()
 
+
+def plot_weights_histogram(x, bins):
+    """
+    Plot weights values on histogram.
+
+    :param x: data/values to plot
+    :param bins: number of bins on histogram
+    :return: None
+    """
+    plt.hist(x, bins=bins)
+    plt.title('Values of trained weights in the network')
+    plt.xlabel('Weight value')
+    plt.ylabel('Occurrences')
+    plt.show()
+

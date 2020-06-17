@@ -131,3 +131,17 @@ def print_validation_acc(history, task_index):
     val_acc = np.array(history.history['val_accuracy']) * 100
     print('\nValidation accuracies: i =', task_index, val_acc)
 
+
+def zero_out_vector(vec, proportion_0):
+    """
+    Zero out 'proportion_0' values in vector 'vec' with the lowest absolute magnitude.
+
+    :param vec: vector of numeric values (numpy array)
+    :param proportion_0: share of zeros we want in vector 'vec' (value between 0 and 1)
+    :return: new vector with specified proportion of 0
+    """
+    vec_sorted = sorted(np.absolute(vec))
+    abs_threshold = vec_sorted[round(len(vec) * proportion_0)]
+    mask = (np.absolute(vec) > abs_threshold).astype(float)
+    return mask * vec
+
