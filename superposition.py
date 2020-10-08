@@ -212,14 +212,14 @@ if __name__ == '__main__':
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
 
-    dataset = 'mnist'   # 'mnist' or 'cifar'
-    nn_cnn = 'nn'      # 'nn' or 'cnn'
+    dataset = 'cifar'   # 'mnist' or 'cifar'
+    nn_cnn = 'cnn'      # 'nn' or 'cnn'
     input_size = (28, 28) if dataset == 'mnist' else (32, 32, 3)    # input sizes for MNIST and CIFAR images
     num_of_units = 1000
     num_of_classes = 10
 
     num_of_tasks = 50 if dataset == 'mnist' else 10
-    num_of_epochs = 10
+    num_of_epochs = 20
     batch_size = 600 if dataset == 'mnist' else 50
 
     train_normal = True
