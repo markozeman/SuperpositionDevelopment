@@ -3,6 +3,28 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
+def show_grayscale_image(img):
+    """
+    Show grayscale image (1 channel).
+
+    :param img: image to plot
+    :return: None
+    """
+    plt.imshow(img, cmap='gray', vmin=0, vmax=255)
+    plt.show()
+
+
+def show_image(img):
+    """
+    Show coloured image (3 channels).
+
+    :param img: image to plot
+    :return: None
+    """
+    plt.imshow(img)
+    plt.show()
+
+
 def plot_general(line_1, line_2, legend_lst, title, x_label, y_label, vertical_lines_x, vl_min, vl_max, text_strings=None):
     """
     Plot two lines on the same plot with additional general information.

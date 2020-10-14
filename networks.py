@@ -2,6 +2,12 @@ from keras import Sequential
 from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
 from keras.optimizers import Adam
 
+## to enalbe always the same initialization of the networks
+from numpy.random import seed
+seed(1)
+from tensorflow import set_random_seed
+set_random_seed(2)
+
 
 def nn(input_size, num_of_units, num_of_classes):
     """

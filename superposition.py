@@ -71,7 +71,7 @@ def normal_training_mnist(model, X_train, y_train, X_test, y_test, num_of_epochs
     for i in range(num_of_tasks - 1):
         print("\n\n Task: %d \n" % (i + 1))
 
-        permuted_X_train = permute_images(X_train)
+        permuted_X_train = permute_images(X_train, i)
         history, accuracies, _ = train_model(model, permuted_X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1)
 
         original_accuracies.extend(accuracies)
@@ -117,7 +117,7 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         elif nn_cnn == 'cnn':
             context_multiplication_CNN(model, context_matrices, i + 1)
 
-        permuted_X_train = permute_images(X_train)
+        permuted_X_train = permute_images(X_train, i)
         history, _, accuracies = train_model(model, permuted_X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
                                              mode='superposition', context_matrices=context_matrices, task_index=i + 1)
 
@@ -212,14 +212,14 @@ if __name__ == '__main__':
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
 
-    dataset = 'cifar'   # 'mnist' or 'cifar'
-    nn_cnn = 'cnn'      # 'nn' or 'cnn'
+    dataset = 'mnist'   # 'mnist' or 'cifar'
+    nn_cnn = 'nn'      # 'nn' or 'cnn'
     input_size = (28, 28) if dataset == 'mnist' else (32, 32, 3)    # input sizes for MNIST and CIFAR images
     num_of_units = 1000
     num_of_classes = 10
 
-    num_of_tasks = 50 if dataset == 'mnist' else 10
-    num_of_epochs = 20
+    num_of_tasks = 3
+    num_of_epochs = 10
     batch_size = 600 if dataset == 'mnist' else 50
 
     train_normal = True
@@ -246,6 +246,9 @@ if __name__ == '__main__':
         if nn_cnn == 'nn':
             model = nn(input_size, num_of_units, num_of_classes)
             context_matrices = get_context_matrices(input_size, num_of_units, num_of_tasks)
+
+            [print(j) for j in context_matrices]
+
         elif nn_cnn == 'cnn':
             model = cnn(input_size, num_of_classes)
             context_matrices = get_context_matrices_CNN(model, num_of_tasks)

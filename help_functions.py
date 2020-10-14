@@ -1,6 +1,9 @@
 import numpy as np
 
 
+seeds = [(i * 7) + 1 for i in range(50)]    # random seeds for permutations, but remain the same each run
+
+
 def permute_pixels(im, seed):
     """
     Randomly permute pixels of image 'im'.
@@ -14,24 +17,37 @@ def permute_pixels(im, seed):
     return np.reshape(im_1d_permuted, im.shape)
 
 
-def permute_images(images):
+def permute_images(images, permutation_index):
     """
     Permute pixels in all images.
 
     :param images: numpy array of images
+    :param permutation_index: index of the permutation (#permutations = #tasks - 1)
     :return: numpy array of permuted images (of the same size)
     """
-    seed = np.random.randint(low=4294967295, dtype=np.uint32)    # make a random seed for all images in an array
+    # seed = np.random.randint(low=4294967295, dtype=np.uint32)    # make a random seed for all images in an array
+
+    # baseline and superposition have the same permutation of images for the corresponding task
+    global seeds
+    seed = seeds[permutation_index]     # the same permutation each run for the first, second, ... task
     return np.array([permute_pixels(im, seed) for im in images])
 
 
-def random_binary_array(size):
+def random_binary_array(size, task_index, layer_index):
     """
     Create an array of 'size' length consisting only of numbers -1 and 1 (approximately 50% each).
 
     :param size: shape of the created array
+    :param task_index: index of a task (in reality task_index=0 means the second task since the first does not have context)
+    :param layer_index: index of the layer (1 for the input layer etc.)
     :return: binary numpy array with values -1 or 1
     """
+    # to make sure that each task in each layer has a different seed (but seeds are the same for different runs)
+    global seeds
+    seed = seeds[task_index] + layer_index
+    np.random.seed(seed)
+
+    # np.random.seed(1)   # set fixed seed to have always the same random vectors
     vec = np.random.uniform(-1, 1, size)
     vec[vec < 0] = -1
     vec[vec >= 0] = 1
@@ -49,9 +65,9 @@ def get_context_matrices(input_size, num_of_units, num_of_tasks):
     """
     context_matrices = []
     for i in range(num_of_tasks):
-        C1 = random_binary_array(input_size[0] * input_size[1])
-        C2 = random_binary_array(num_of_units)
-        C3 = random_binary_array(num_of_units)
+        C1 = random_binary_array(input_size[0] * input_size[1], i, 1)
+        C2 = random_binary_array(num_of_units, i, 2)
+        C3 = random_binary_array(num_of_units, i, 3)
         context_matrices.append([C1, C2, C3])
     return context_matrices
 
@@ -72,11 +88,11 @@ def get_context_matrices_CNN(model, num_of_tasks):
     context_matrices = []
     for i in range(num_of_tasks):
         _, kernel_size, tensor_width, num_of_conv_layers = context_shapes[0]
-        C1 = random_binary_array(kernel_size * kernel_size * tensor_width * num_of_conv_layers)   # conv layer
+        C1 = random_binary_array(kernel_size * kernel_size * tensor_width * num_of_conv_layers, i, 1)   # conv layer
         _, kernel_size, tensor_width, num_of_conv_layers = context_shapes[1]
-        C2 = random_binary_array(kernel_size * kernel_size * tensor_width * num_of_conv_layers)   # conv layer
-        C3 = random_binary_array(context_shapes[2][0])  # dense layer
-        C4 = random_binary_array(context_shapes[3][0])  # dense layer
+        C2 = random_binary_array(kernel_size * kernel_size * tensor_width * num_of_conv_layers, i, 2)   # conv layer
+        C3 = random_binary_array(context_shapes[2][0], i, 3)  # dense layer
+        C4 = random_binary_array(context_shapes[3][0], i, 4)  # dense layer
         context_matrices.append([C1, C2, C3, C4])
     return context_matrices
 
