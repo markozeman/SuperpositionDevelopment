@@ -58,7 +58,7 @@ def normal_training_mnist(model, X_train, y_train, X_test, y_test, num_of_epochs
     :param num_of_tasks: number of different tasks (permutations of original images)
     :param nn_cnn: usage of (convolutional) neural network (possible values: 'nn' or 'cnn')
     :param batch_size: batch size - number of samples per gradient update (default = 32)
-    :return: list of test accuracies for 10 epochs for each task
+    :return: list of test accuracies for num_of_epochs epochs for each task
     """
     original_accuracies = []
 
@@ -95,7 +95,7 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     :param context_matrices: multidimensional numpy array with random context (binary superposition)
     :param nn_cnn: usage of (convolutional) neural network (possible values: 'nn' or 'cnn')
     :param batch_size: batch size - number of samples per gradient update (default = 32)
-    :return: list of test accuracies for 10 epochs for each task
+    :return: list of test accuracies for num_of_epochs epochs for each task
     """
     original_accuracies = []
 
@@ -138,7 +138,7 @@ def normal_training_cifar(model, datasets, num_of_epochs, num_of_tasks, nn_cnn, 
     :param num_of_tasks: number of different tasks
     :param nn_cnn: usage of (convolutional) neural network (possible values: 'nn' or 'cnn')
     :param batch_size: batch size - number of samples per gradient update (default = 32)
-    :return: list of test accuracies for 10 epochs for each task
+    :return: list of test accuracies for num_of_epochs epochs for each task
     """
     original_accuracies = []
 
@@ -174,7 +174,7 @@ def superposition_training_cifar(model, datasets, num_of_epochs, num_of_tasks, c
     :param context_matrices: multidimensional numpy array with random context (binary superposition)
     :param nn_cnn: usage of (convolutional) neural network (possible values: 'nn' or 'cnn')
     :param batch_size: batch size - number of samples per gradient update (default = 32)
-    :return: list of test accuracies for 10 epochs for each task
+    :return: list of test accuracies for num_of_epochs epochs for each task
     """
     original_accuracies = []
 
@@ -218,7 +218,7 @@ if __name__ == '__main__':
     num_of_units = 1000
     num_of_classes = 10
 
-    num_of_tasks = 3
+    num_of_tasks = 10
     num_of_epochs = 10
     batch_size = 600 if dataset == 'mnist' else 50
 
@@ -246,9 +246,6 @@ if __name__ == '__main__':
         if nn_cnn == 'nn':
             model = nn(input_size, num_of_units, num_of_classes)
             context_matrices = get_context_matrices(input_size, num_of_units, num_of_tasks)
-
-            [print(j) for j in context_matrices]
-
         elif nn_cnn == 'cnn':
             model = cnn(input_size, num_of_classes)
             context_matrices = get_context_matrices_CNN(model, num_of_tasks)

@@ -1,3 +1,4 @@
+import copy
 from math import exp
 from keras.callbacks import Callback
 import numpy as np
@@ -49,9 +50,19 @@ class TestSuperpositionPerformanceCallback(Callback):
         for i, layer in enumerate(self.model.layers[1:]):  # first layer is Flatten so we skip it
             # not multiplying with inverse because inverse is the same in binary superposition with {-1, 1} on the diagonal
             # using only element-wise multiplication on diagonal vectors for speed-up
-            context_inverse_multiplied = self.context_matrices[self.task_index][i]
+            context_inverse_multiplied = copy.deepcopy(self.context_matrices[self.task_index][i])
             for task_i in range(self.task_index - 1, 0, -1):
                 context_inverse_multiplied = np.multiply(context_inverse_multiplied, self.context_matrices[task_i][i])
+
+            '''
+            # shuffle a part of context vector
+            vector_size = len(context_inverse_multiplied)
+            for iii in range(vector_size):
+                percent_inverted = 50
+                if iii % round(100 / percent_inverted) == 0:
+                    context_inverse_multiplied[iii] = -1 * context_inverse_multiplied[iii]   # change bit
+            '''
+
             context_inverse_multiplied = np.diag(context_inverse_multiplied)    # vector to diagonal matrix
 
             layer.set_weights([context_inverse_multiplied @ curr_w_matrices[i], curr_bias_vectors[i]])
@@ -138,6 +149,8 @@ def lr_scheduler(epoch, lr):
     :param lr: current learning rate
     :return: new learning rate
     """
+    num_of_epochs = 10
+
     global lr_over_time
     lr_over_time.append(lr)
 
@@ -150,7 +163,7 @@ def lr_scheduler(epoch, lr):
         t = len(lr_over_time)
         lr = initial_lr * exp(-k * t)
 
-    if len(lr_over_time) % 10 == 0:     # to start each new task with the same learning rate as the first one (1 task - 10 epochs)
+    if len(lr_over_time) % num_of_epochs == 0:    # to start each new task with the same learning rate as the first one
         lr_over_time = []   # re-initiate learning rate
 
     return max(lr, 0.000001)    # don't let learning rate go to 0
