@@ -1,3 +1,5 @@
+import math
+import seaborn as sns
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -70,4 +72,28 @@ def plot_weights_histogram(x, bins):
     plt.xlabel('Weight value')
     plt.ylabel('Occurrences')
     plt.show()
+
+
+def weights_heatmaps(W_matrices, labels, task_index):
+    """
+    Plot heat maps of weights from layers in the network.
+
+    :param W_matrices: list of 2D numpy arrays which represent weights between layers
+    :param labels: list of strings to put in the plot title
+    :param task_index: integer index of the current task
+    :return: None
+    """
+    # norm_matrix = (W_matrix - np.min(W_matrix)) / np.ptp(W_matrix)   # normalise matrix between [0, 1]
+    plt.figure()
+    if len(W_matrices) <= 3:
+        plot_layout = (1, len(W_matrices))
+    else:
+        plot_layout = (2, math.ceil(len(W_matrices) / 2))
+
+    for layer_index, weights_matrix in enumerate(W_matrices):
+        plt.subplot(*plot_layout, layer_index + 1)
+        sns.heatmap(weights_matrix, cmap='coolwarm', linewidth=0) if layer_index < 2 else sns.heatmap(weights_matrix, cmap='Blues', linewidth=0)
+        plt.title("Task %d || %s" % (task_index, labels[layer_index]))
+    # plt.show()
+    plt.savefig('../../Plots/Reproducible results/5 tasks/W heatmaps/plot_%s.png' % str(task_index), bbox_inches='tight', dpi=200)
 

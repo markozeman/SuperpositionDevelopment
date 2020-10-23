@@ -98,8 +98,11 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     :return: list of test accuracies for num_of_epochs epochs for each task
     """
     original_accuracies = []
+    show_W_heatmaps = False
 
     # context_multiplication(model, context_matrices, 0)
+
+    W_before = model.layers[3].get_weights()[0]
 
     # first training task - original MNIST images
     history, _, accuracies = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
@@ -107,9 +110,16 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     original_accuracies.extend(accuracies)
     print_validation_acc(history, 0)
 
+    W_after = model.layers[3].get_weights()[0]
+    W_diff = np.absolute(W_before - W_after)    # absolute difference of weight matrices before and after training
+    if show_W_heatmaps:
+        weights_heatmaps([W_before, W_after, W_diff], ['before 1st training', 'after 1st training', 'diff'], 0)
+
     # other training tasks - permuted MNIST data
     for i in range(num_of_tasks - 1):
         print("\n\n Task: %d \n" % (i + 1))
+
+        W_before = model.layers[3].get_weights()[0]
 
         # multiply current weights with context matrices for each layer (without changing weights from bias node)
         if nn_cnn == 'nn':
@@ -117,9 +127,17 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         elif nn_cnn == 'cnn':
             context_multiplication_CNN(model, context_matrices, i + 1)
 
+        W_after = model.layers[3].get_weights()[0]
+        W_diff = np.absolute(W_before - W_after)  # difference of weight matrices before and after context multiplication
+
         permuted_X_train = permute_images(X_train, i)
         history, _, accuracies = train_model(model, permuted_X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
                                              mode='superposition', context_matrices=context_matrices, task_index=i + 1)
+
+        W_diff_training = np.absolute(model.layers[3].get_weights()[0] - W_after)  # difference of weight matrices before and after training
+        if show_W_heatmaps:
+            weights_heatmaps([W_before, W_after, W_diff, W_diff_training],
+                             ['before context mul.', 'after context mul.', 'diff context', 'diff training'], i + 1)
 
         original_accuracies.extend(accuracies)
         print_validation_acc(history, i + 1)
@@ -215,14 +233,14 @@ if __name__ == '__main__':
     dataset = 'mnist'   # 'mnist' or 'cifar'
     nn_cnn = 'nn'      # 'nn' or 'cnn'
     input_size = (28, 28) if dataset == 'mnist' else (32, 32, 3)    # input sizes for MNIST and CIFAR images
-    num_of_units = 1000
+    num_of_units = 20
     num_of_classes = 10
 
-    num_of_tasks = 10
+    num_of_tasks = 5
     num_of_epochs = 10
     batch_size = 600 if dataset == 'mnist' else 50
 
-    train_normal = True
+    train_normal = False
     train_superposition = True
 
     if train_normal:
@@ -262,6 +280,9 @@ if __name__ == '__main__':
         else:
             raise ValueError("'dataset' variable must have value 'mnist' or 'cifar'")
 
-    plot_general(acc_superposition, acc_normal, ['Superposition model', 'Baseline model'],
+    plot_general(acc_superposition, [], ['Superposition model', 'Baseline model'],
                  'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
+    #
+    # plot_general(acc_superposition, acc_normal, ['Superposition model', 'Baseline model'],
+    #                  'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
 
