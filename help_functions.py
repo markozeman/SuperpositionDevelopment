@@ -93,6 +93,29 @@ def get_context_matrices_CNN(model, num_of_tasks):
         C2 = random_binary_array(kernel_size * kernel_size * tensor_width * num_of_conv_layers, i, 2)   # conv layer
         C3 = random_binary_array(context_shapes[2][0], i, 3)  # dense layer
         C4 = random_binary_array(context_shapes[3][0], i, 4)  # dense layer
+
+        '''
+        # fixed context initialization (10 tasks, each has 10% of layer vectors -1 at different positions)
+        l_1 = 86
+        l_2 = 1843
+        l_3 = 1254
+        l_4 = 100
+
+        _, kernel_size, tensor_width, num_of_conv_layers = context_shapes[0]
+        C1 = np.full(shape=kernel_size * kernel_size * tensor_width * num_of_conv_layers, fill_value=1)
+        C1[i * l_1: (i + 1) * l_1] = np.full(shape=l_1, fill_value=-1)
+
+        _, kernel_size, tensor_width, num_of_conv_layers = context_shapes[1]
+        C2 = np.full(shape=kernel_size * kernel_size * tensor_width * num_of_conv_layers, fill_value=1)
+        C2[i * l_2: (i + 1) * l_2] = np.full(shape=l_2, fill_value=-1)
+
+        C3 = np.full(shape=context_shapes[2][0], fill_value=1)
+        C3[i * l_3: (i + 1) * l_3] = np.full(shape=l_3, fill_value=-1)
+
+        C4 = np.full(shape=context_shapes[3][0], fill_value=1)
+        C4[i * l_4: (i + 1) * l_4] = np.full(shape=l_4, fill_value=-1)
+        '''
+
         context_matrices.append([C1, C2, C3, C4])
     return context_matrices
 
