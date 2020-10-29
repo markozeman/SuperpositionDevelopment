@@ -1,7 +1,10 @@
+import copy
+
 import numpy as np
 
+from plots import plot_many_lines
 
-seeds = [(i * 7) + 1 for i in range(50)]    # random seeds for permutations, but remain the same each run
+seeds = [(i * 7) + 1 for i in range(3000)]    # random seeds for permutations, but remain the same each run (range is the maximum number of tasks)
 
 
 def permute_pixels(im, seed):
@@ -69,6 +72,9 @@ def get_context_matrices(input_size, num_of_units, num_of_tasks):
         C2 = random_binary_array(num_of_units, i, 2)
         C3 = random_binary_array(num_of_units, i, 3)
         context_matrices.append([C1, C2, C3])
+
+    context_stats(context_matrices)
+
     return context_matrices
 
 
@@ -118,6 +124,45 @@ def get_context_matrices_CNN(model, num_of_tasks):
 
         context_matrices.append([C1, C2, C3, C4])
     return context_matrices
+
+
+def context_stats(context_matrices):
+    """
+    Display statistics of context matrices in terms of dot product (for MNIST or 3 context matrices).
+
+    :param context_matrices: multidimensional numpy array with random context (binary superposition)
+    :return: None
+    """
+    # leave first row out since this context is not used
+    stats_l1 = layer_ortho_stats(np.array(context_matrices)[1:, 0])
+    stats_l2 = layer_ortho_stats(np.array(context_matrices)[1:, 1])
+    stats_l3 = layer_ortho_stats(np.array(context_matrices)[1:, 2])
+
+    plot_many_lines([stats_l1[:, 0], stats_l2[:, 0], stats_l3[:, 0], stats_l1[:, 1], stats_l2[:, 1], stats_l3[:, 1]],
+                    ['L1 sum', 'L2 sum', 'L3 sum', 'L1 mean', 'L2 mean', 'L3 mean'],
+                    'Size L1 = %d,   Size L2 = %d,   Size L3 = %d' % (len(context_matrices[0][0]), len(context_matrices[0][1]), len(context_matrices[0][2])),
+                    'task number - 2', 'orthogonality')
+
+
+def layer_ortho_stats(layer_cv):
+    """
+    Compute dot product stats for a specific layer.
+
+    :param layer_cv: vector of context vectors, for a specific layer all task contexts from  the first one on
+    :return: 2D list, first dimension are tasks from the second on (where comparison starts to be possible),
+    the second dimension is a tuple of (normalized sum of dot products to the first vector, normalized average sum of dot products to the first vector,
+    list of dot products between current context vector and all back to the first one)
+    """
+    all_orthos = []
+    for index in range(len(layer_cv)):
+        if index > 0:
+            curr_vec = layer_cv[index]
+            vec_orthos = []
+            for i in range(index-1, -1, -1):
+                vec_orthos.append(np.dot(curr_vec, layer_cv[i]))
+            sum_orthos_normalized = sum([abs(v_o) for v_o in vec_orthos]) / len(curr_vec) * 100  # * 100 to increase small values (away from 0)
+            all_orthos.append((sum_orthos_normalized, round(sum_orthos_normalized / len(vec_orthos), 1), vec_orthos))
+    return np.array(all_orthos)
 
 
 def context_multiplication(model, context_matrices, task_index):

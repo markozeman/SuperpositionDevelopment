@@ -59,6 +59,27 @@ def plot_general(line_1, line_2, legend_lst, title, x_label, y_label, vertical_l
     plt.show()
 
 
+def plot_many_lines(lines, legend, title, x_label, y_label):
+    """
+    Plot many lines (of the same length) on the x-axis.
+
+    :param lines: list of lists of values
+    :param legend: label for each line (len(lines) = len(legend))
+    param title: plot title (string)
+    :param x_label: label of axis x (string)
+    :param y_label: label of axis y (string)
+    :return: None
+    """
+    for l in lines:
+        plt.plot(l)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    plt.legend(legend)
+    plt.show()
+
+
+
 def plot_weights_histogram(x, bins):
     """
     Plot weights values on histogram.
