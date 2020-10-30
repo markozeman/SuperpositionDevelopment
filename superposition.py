@@ -236,7 +236,7 @@ if __name__ == '__main__':
     num_of_units = 1000
     num_of_classes = 10
 
-    num_of_tasks = 50
+    num_of_tasks = 5
     num_of_epochs = 10
     batch_size = 600 if dataset == 'mnist' else 50
 
@@ -282,7 +282,7 @@ if __name__ == '__main__':
 
     plot_general(acc_superposition, [], ['Superposition model', 'Baseline model'],
                  'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
-    #
+
     # plot_general(acc_superposition, acc_normal, ['Superposition model', 'Baseline model'],
     #                  'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
 

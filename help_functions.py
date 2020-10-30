@@ -1,5 +1,3 @@
-import copy
-
 import numpy as np
 
 from plots import plot_many_lines
@@ -73,7 +71,26 @@ def get_context_matrices(input_size, num_of_units, num_of_tasks):
         C3 = random_binary_array(num_of_units, i, 3)
         context_matrices.append([C1, C2, C3])
 
-    context_stats(context_matrices)
+    '''
+    # totally orthogonal context initialization (for 5 MNIST tasks)
+    l_1 = orthogonal_contexts(input_size[0] * input_size[1], 4)
+    l_2 = orthogonal_contexts(num_of_units, 4)
+    l_3 = orthogonal_contexts(num_of_units, 4)
+
+    context_matrices = [[[None], [None], [None]],     # since the first row of contexts is unused
+                        [l_1[0], l_2[0], l_3[0]],
+                        [l_1[1], l_2[1], l_3[1]],
+                        [l_1[2], l_2[2], l_3[2]],
+                        [l_1[3], l_2[3], l_3[3]]]
+
+    for i in range(5):  # for 5 additional tasks
+        C1 = random_binary_array(input_size[0] * input_size[1], i, 1)
+        C2 = random_binary_array(num_of_units, i, 2)
+        C3 = random_binary_array(num_of_units, i, 3)
+        context_matrices.append([C1, C2, C3])
+    '''
+
+    # context_stats(context_matrices)
 
     return context_matrices
 
@@ -228,4 +245,30 @@ def zero_out_vector(vec, proportion_0):
     abs_threshold = vec_sorted[round(len(vec) * proportion_0)]
     mask = (np.absolute(vec) > abs_threshold).astype(float)
     return mask * vec
+
+
+def orthogonal_contexts(vec_length, n):
+    """
+    Construct perfectly orthogonal vectors.
+
+    :param vec_length: context vector length
+    :param n: number of vectors needed
+    :return: 2D list (n x vec_length) of mutually orthogonal binary vectors
+    """
+    contexts = []
+    curr_len = vec_length / 2
+    step = 2
+    while curr_len.is_integer():
+        v = np.array([])
+        val = 1
+        for _ in range(step):
+            v = np.concatenate((v, np.full(shape=int(curr_len), fill_value=val)))
+            val *= -1
+        contexts.append(v)
+        curr_len /= 2
+        step *= 2
+    if len(contexts) < n:
+        print('\nn is higher than the number of mutually orthogonal vectors!\n')
+    return contexts[:n]
+
 
