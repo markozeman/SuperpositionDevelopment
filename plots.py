@@ -1,5 +1,6 @@
 import math
 import seaborn as sns
+import pandas as pd
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -79,7 +80,6 @@ def plot_many_lines(lines, legend, title, x_label, y_label):
     plt.show()
 
 
-
 def plot_weights_histogram(x, bins):
     """
     Plot weights values on histogram.
@@ -117,4 +117,26 @@ def weights_heatmaps(W_matrices, labels, task_index):
         plt.title("Task %d || %s" % (task_index, labels[layer_index]))
     # plt.show()
     plt.savefig('../../Plots/Reproducible results/5 tasks/W heatmaps/plot_%s.png' % str(task_index), bbox_inches='tight', dpi=200)
+
+
+def plot_confusion_matrix(conf_mat):
+    """
+    Plot already calculated confusion matrix.
+
+    :param conf_mat: 2D confusion matrix
+    :return: None
+    """
+    # compute accuracy
+    all_cases = conf_mat.sum()
+    correct_cases = conf_mat.diagonal().sum()
+    acc = (correct_cases / all_cases) * 100
+
+    size = conf_mat.shape[0]
+    df_cm = pd.DataFrame(conf_mat, range(size), range(size))
+    sns.heatmap(df_cm, annot=True, cmap='Blues', linewidth=0, fmt='d')
+    plt.title('Test accuracy: %d / %d = %.2f %%' % (correct_cases, all_cases, acc))
+    plt.xlabel('predicted')
+    plt.ylabel('true')
+    plt.show()
+
 
