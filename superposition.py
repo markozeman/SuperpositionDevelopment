@@ -236,8 +236,8 @@ if __name__ == '__main__':
     num_of_units = 1000
     num_of_classes = 10
 
-    num_of_tasks = 5
-    num_of_epochs = 10
+    num_of_tasks = 10
+    num_of_epochs = 50
     batch_size = 600 if dataset == 'mnist' else 50
 
     train_normal = False

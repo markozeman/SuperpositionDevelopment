@@ -115,8 +115,9 @@ def weights_heatmaps(W_matrices, labels, task_index):
         plt.subplot(*plot_layout, layer_index + 1)
         sns.heatmap(weights_matrix, cmap='coolwarm', linewidth=0) if layer_index < 2 else sns.heatmap(weights_matrix, cmap='Blues', linewidth=0)
         plt.title("Task %d || %s" % (task_index, labels[layer_index]))
-    # plt.show()
-    plt.savefig('../../Plots/Reproducible results/5 tasks/W heatmaps/plot_%s.png' % str(task_index), bbox_inches='tight', dpi=200)
+    plt.tight_layout()
+    plt.show()
+    # plt.savefig('../../../Plots/Reproducible results/splitMNIST/20units_50epochs/W heatmaps/plot_%s.png' % str(task_index), bbox_inches='tight', dpi=300)
 
 
 def plot_confusion_matrix(conf_mat):
