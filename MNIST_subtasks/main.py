@@ -1,3 +1,5 @@
+from collections import Counter
+
 import tensorflow as tf
 import numpy as np
 from keras.utils import to_categorical
@@ -36,15 +38,21 @@ def get_test_acc_for_individual_tasks(final_model, context_matrices, test_data, 
     :param context_matrices: multidimensional numpy array with random context (binary superposition)
     :param test_data: [(X_test_1, y_test_1), (X_test_2, y_test_2), ...]
     :param X_test: all test data
-    :return: list of superposition accuracies for individual tasks, all tasks predictions
+    :return: list of superposition accuracies for individual tasks, all tasks predictions,
+    list of indices of incorrectly predicted samples for each task
     """
     all_task_predictions = []
+    reverse_incorrect_indices = []
     reverse_accuracies = []
     num_of_tasks = len(test_data)
     for i in range(num_of_tasks - 1, -1, -1):   # go from the last task to the first one
         # test i-th task accuracy
         loss, accuracy = final_model.evaluate(test_data[i][0], test_data[i][1], verbose=2)
         reverse_accuracies.append(accuracy * 100)
+
+        incorrect_indices = np.nonzero(final_model.predict_classes(test_data[i][0]).reshape((-1,)) != np.argmax(test_data[i][1], axis=1))[0]
+        reverse_incorrect_indices.append(incorrect_indices)
+        # print('incorrect:', len(incorrect_indices), incorrect_indices)
 
         # testing
         task_predictions = final_model.predict(X_test)
@@ -59,7 +67,7 @@ def get_test_acc_for_individual_tasks(final_model, context_matrices, test_data, 
                 context_inverse_multiplied = np.linalg.inv(np.diag(context_matrices[i][layer_index]))    # matrix inverse is not necessary for binary context
                 layer.set_weights([context_inverse_multiplied @ layer.get_weights()[0], layer.get_weights()[1]])
 
-    return list(reversed(reverse_accuracies)), all_task_predictions
+    return list(reversed(reverse_accuracies)), all_task_predictions, list(reversed(reverse_incorrect_indices))
 
 
 def global_accuracy(task_accuracies, test_samples_per_task):
@@ -151,7 +159,7 @@ def split_MNIST(model, X_train, y_train, X_test, y_test, input_size, num_of_unit
                  'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
 
     test_data = np.array(d, dtype=object)[:, 2:]
-    sup_acc_per_task, all_tasks_predictions = get_test_acc_for_individual_tasks(model, context_matrices, test_data, X_test)
+    sup_acc_per_task, all_tasks_predictions, _ = get_test_acc_for_individual_tasks(model, context_matrices, test_data, X_test)
     print('Accuracies for each task: ', sup_acc_per_task)
     print('Global accuracy: ', global_accuracy(sup_acc_per_task, [2115, 2042, 1874, 1986, 1983]))  # for tasks in order [0,1] to [8,9]
 
@@ -177,11 +185,6 @@ def all_tasks_inference_one_vs_all(all_tasks_predictions, y_test):
     t10, t9, t8, t7, t6, t5, t4, t3, t2, t1 = all_tasks_predictions
     for a, b, c, d, e, f, g, h, i, j in zip(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10):   # now right order of tasks
         max_index = np.argmax(np.array([a[0], b[0], c[0], d[0], e[0], f[0], g[0], h[0], i[0], j[0]]))
-
-        if index == 8:
-            print(np.array([a, b, c, d, e, f, g, h, i, j]))
-            print(max_index)
-
         y = np.argmax(y_test[index])
 
         if max_index != y:  # incorrect prediction
@@ -234,7 +237,7 @@ def split_MNIST_one_vs_all(model, X_train, y_train, X_test, y_test, input_size, 
                  'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
 
     test_data = np.array(d, dtype=object)[:, 2:]
-    sup_acc_per_task, all_tasks_predictions = get_test_acc_for_individual_tasks(model, context_matrices, test_data, X_test)
+    sup_acc_per_task, all_tasks_predictions, _ = get_test_acc_for_individual_tasks(model, context_matrices, test_data, X_test)
     print('Accuracies for each task: ', sup_acc_per_task)
     print('Global accuracy: ', global_accuracy(sup_acc_per_task,
           [980, 1135, 1032, 1010, 982, 892, 958, 1028, 974, 1009]))  # for tasks in numerical order
@@ -242,6 +245,91 @@ def split_MNIST_one_vs_all(model, X_train, y_train, X_test, y_test, input_size, 
     # show_confusion_matrix(model, X_test, y_test)
 
     return all_tasks_inference_one_vs_all(all_tasks_predictions, y_test)
+
+
+def all_tasks_inference_emsemble(all_tasks_predictions, y_test):
+    """
+    Compare inference of all_tasks_predictions with y_test for ensemble approach.
+
+    :param all_tasks_predictions: list of 2D arrays (length = num_of_tasks), each is consisted of len(y_test) x 10 (output),
+                                  in reversed order (from last to the first task)
+    :param y_test: test output labels (one-hot encoded)
+    :return: None
+    """
+    index = 0
+    incorrect = 0
+    t10, t9, t8, t7, t6, t5, t4, t3, t2, t1 = all_tasks_predictions
+    # t5, t4, t3, t2, t1 = all_tasks_predictions
+    for a, b, c, d, e, f, g, h, i, j in zip(t1, t2, t3, t4, t5, t6, t7, t8, t9, t10):  # now right order of tasks
+    # for a, b, c, d, e in zip(t1, t2, t3, t4, t5):  # now right order of tasks
+        sum_up = a + b + c + d + e + f + g + h + i + j
+        # sum_up = a + b + c + d + e
+
+        a, b, c, d, e, f, g, h, i, j = np.argmax(a), np.argmax(b), np.argmax(c), np.argmax(d), np.argmax(e), \
+                                       np.argmax(f), np.argmax(g), np.argmax(h), np.argmax(i), np.argmax(j)
+        # a, b, c, d, e = np.argmax(a), np.argmax(b), np.argmax(c), np.argmax(d), np.argmax(e)
+
+        counter = Counter([a, b, c, d, e, f, g, h, i, j])
+        # counter = Counter([a, b, c, d, e])
+        highest = max(counter, key=counter.get)
+
+        y = np.argmax(y_test[index])
+
+        if np.argmax(sum_up) != y:
+            print('predictions', a, b, c, d, e, f, g, h, i, j)
+            # print('predictions', a, b, c, d, e)
+            print('pred sum up: ', np.argmax(sum_up))
+            print('pred highest count: ', highest)
+            print('y', y)
+            print()
+            incorrect += 1
+
+        index += 1
+
+    print('Incorrect examples:', incorrect)
+
+
+def split_MNIST_ensemble(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks, num_of_epochs, batch_size):
+    """
+    Train MNIST ensemble in superposition.
+
+    :param model: Keras model instance
+    :param X_train: train input data
+    :param y_train: train output labels
+    :param X_test: test input data
+    :param y_test: test output labels
+    :param input_size: image input size in pixels
+    :param num_of_units: number of neurons in each hidden layer
+    :param num_of_tasks: number of different tasks
+    :param num_of_epochs: number of epochs for a task
+    :param batch_size: batch size - number of samples per gradient update
+    :return: None
+    """
+    # # to select only 66.32% random samples for each of the tasks
+    # d = []
+    # for _ in range(num_of_tasks):
+    #     sampled_indices = np.array(list(map(round, np.random.uniform(-0.5, 9999.5, 6320))))
+    #     d.append((X_train[sampled_indices], y_train[sampled_indices], X_test, y_test))
+
+    # to select full train data for each task
+    d = [(X_train, y_train, X_test, y_test) for _ in range(num_of_tasks)]
+
+    context_matrices = get_context_matrices(input_size, num_of_units, num_of_tasks)
+    acc_superposition = superposition_training_cifar(model, d, num_of_epochs, num_of_tasks, context_matrices, nn_cnn,
+                                                     batch_size)
+
+    plot_general(acc_superposition, [], ['Superposition model', 'Baseline model'],
+                 'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
+
+    test_data = np.array(d, dtype=object)[:, 2:]
+    sup_acc_per_task, all_tasks_predictions, incorrect_indices = get_test_acc_for_individual_tasks(model, context_matrices, test_data, X_test)
+    print('Accuracies for each task: ', sup_acc_per_task)
+    print('Global accuracy: ', global_accuracy(sup_acc_per_task, [10000 for _ in range(num_of_tasks)]))
+
+    intersection_indices = list(set.intersection(*map(set, incorrect_indices)))
+    print(len(intersection_indices), intersection_indices)
+
+    all_tasks_inference_emsemble(all_tasks_predictions, y_test)
 
 
 if __name__ == '__main__':
@@ -261,25 +349,21 @@ if __name__ == '__main__':
     batch_size = 600
 
     X_train, y_train, X_test, y_test = get_dataset(dataset, nn_cnn, input_size, num_of_classes)
-    # model = nn(input_size, num_of_units, num_of_classes)
+    model = nn(input_size, num_of_units, num_of_classes)
 
     # split_MNIST(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks, num_of_epochs, batch_size)
 
-    model = nn(input_size, num_of_units, 2)
-    wrong_indices = split_MNIST_one_vs_all(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks,
-                           num_of_epochs, batch_size)
-    print('wrong_indices', len(wrong_indices), wrong_indices)
+    # wrong_indices = split_MNIST_one_vs_all(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks,
+    #                        num_of_epochs, batch_size)
+    # print('wrong_indices', len(wrong_indices), wrong_indices)
 
+    split_MNIST_ensemble(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks, num_of_epochs, batch_size)
 
-    # # change one-hot encoded labels to first layer context vectors (for each of 10 labels)
-    # context_matrices = get_context_matrices(input_size, num_of_units, 10)
-    # y_train = np.array([context_matrices[index][0] for index in np.argmax(y_train, axis=1)])
-    # y_test = np.array([context_matrices[index][0] for index in np.argmax(y_test, axis=1)])
-
+    '''
     X_train, y_train, X_test, y_test = get_dataset(dataset, nn_cnn, input_size, num_of_classes)
     model = nn(input_size, num_of_units, num_of_classes)
     num_of_tasks = 1
-    num_of_epochs = 10
+    num_of_epochs = 50
     acc_normal = normal_training_mnist(model, X_train, y_train, X_test, y_test, num_of_epochs, num_of_tasks, nn_cnn, batch_size)
 
     incorrect_indices = np.nonzero(model.predict_classes(X_test).reshape((-1,)) != np.argmax(y_test, axis=1))[0]
@@ -290,6 +374,6 @@ if __name__ == '__main__':
 
     intersection = list(set(wrong_indices) & set(incorrect_indices))
     print('intersection', len(intersection), intersection)
-
+    '''
 
 
