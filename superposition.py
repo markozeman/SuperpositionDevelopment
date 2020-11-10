@@ -226,9 +226,9 @@ def superposition_training_cifar(model, datasets, num_of_epochs, num_of_tasks, c
 
 if __name__ == '__main__':
     # to avoid cuDNN error (https://github.com/tensorflow/tensorflow/issues/24496)
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
+    # config = tf.ConfigProto()
+    # config.gpu_options.allow_growth = True
+    # sess = tf.Session(config=config)
 
     dataset = 'mnist'   # 'mnist' or 'cifar'
     nn_cnn = 'nn'      # 'nn' or 'cnn'
@@ -236,8 +236,8 @@ if __name__ == '__main__':
     num_of_units = 1000
     num_of_classes = 10
 
-    num_of_tasks = 10
-    num_of_epochs = 50
+    num_of_tasks = 2
+    num_of_epochs = 10
     batch_size = 600 if dataset == 'mnist' else 50
 
     train_normal = False

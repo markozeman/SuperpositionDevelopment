@@ -1,5 +1,4 @@
 from collections import Counter
-
 import tensorflow as tf
 import numpy as np
 from keras.utils import to_categorical
@@ -334,9 +333,9 @@ def split_MNIST_ensemble(model, X_train, y_train, X_test, y_test, input_size, nu
 
 if __name__ == '__main__':
     # to avoid cuDNN error (https://github.com/tensorflow/tensorflow/issues/24496)
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
+    # config = tf.ConfigProto()
+    # config.gpu_options.allow_growth = True
+    # sess = tf.Session(config=config)
 
     dataset = 'mnist'
     nn_cnn = 'nn'
