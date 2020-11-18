@@ -102,7 +102,8 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
 
     # context_multiplication(model, context_matrices, 0)
 
-    W_before = model.layers[3].get_weights()[0]
+    if nn_cnn == 'nn':
+        W_before = model.layers[3].get_weights()[0]
 
     # first training task - original MNIST images
     history, _, accuracies = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
@@ -110,16 +111,18 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     original_accuracies.extend(accuracies)
     print_validation_acc(history, 0)
 
-    W_after = model.layers[3].get_weights()[0]
-    W_diff = np.absolute(W_before - W_after)    # absolute difference of weight matrices before and after training
-    if show_W_heatmaps:
-        weights_heatmaps([W_before, W_after, W_diff], ['before 1st training', 'after 1st training', 'diff'], 0)
+    if nn_cnn == 'nn':
+        W_after = model.layers[3].get_weights()[0]
+        W_diff = np.absolute(W_before - W_after)    # absolute difference of weight matrices before and after training
+        if show_W_heatmaps:
+            weights_heatmaps([W_before, W_after, W_diff], ['before 1st training', 'after 1st training', 'diff'], 0)
 
     # other training tasks - permuted MNIST data
     for i in range(num_of_tasks - 1):
         print("\n\n Task: %d \n" % (i + 1))
 
-        W_before = model.layers[3].get_weights()[0]
+        if nn_cnn == 'nn':
+            W_before = model.layers[3].get_weights()[0]
 
         # multiply current weights with context matrices for each layer (without changing weights from bias node)
         if nn_cnn == 'nn':
@@ -127,17 +130,29 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         elif nn_cnn == 'cnn':
             context_multiplication_CNN(model, context_matrices, i + 1)
 
-        W_after = model.layers[3].get_weights()[0]
-        W_diff = np.absolute(W_before - W_after)  # difference of weight matrices before and after context multiplication
+        # # to enable dynamic contexts - update them while learning, when they are not needed for weight change anymore
+        # # in the callback you can only multiply with the specific dynamic context vector then to get the right weights
+        # if i > 0:
+        #     for task_index in range(1, i + 1):
+        #         for layer_index in range(len(context_matrices[0])):
+        #             context_matrices[task_index][layer_index] = np.multiply(context_matrices[task_index][layer_index],
+        #                                                                     context_matrices[i + 1][layer_index])
+
+        if nn_cnn == 'nn':
+            W_after = model.layers[3].get_weights()[0]
+            W_diff = np.absolute(W_before - W_after)  # difference of weight matrices before and after context multiplication
 
         permuted_X_train = permute_images(X_train, i)
         history, _, accuracies = train_model(model, permuted_X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
                                              mode='superposition', context_matrices=context_matrices, task_index=i + 1)
 
-        W_diff_training = np.absolute(model.layers[3].get_weights()[0] - W_after)  # difference of weight matrices before and after training
-        if show_W_heatmaps:
-            weights_heatmaps([W_before, W_after, W_diff, W_diff_training],
-                             ['before context mul.', 'after context mul.', 'diff context', 'diff training'], i + 1)
+        if nn_cnn == 'nn':
+            W_after_training = model.layers[3].get_weights()[0]
+            W_diff_training = np.absolute(W_after_training - W_after)  # difference of weight matrices before and after training
+
+            if show_W_heatmaps:
+                weights_heatmaps([W_before, W_after, W_diff, W_diff_training, W_after_training],
+                                 ['before context mul.', 'after context mul.', 'diff context', 'diff training', 'after training'], i + 1)
 
         original_accuracies.extend(accuracies)
         print_validation_acc(history, i + 1)
@@ -236,7 +251,7 @@ if __name__ == '__main__':
     num_of_units = 1000
     num_of_classes = 10
 
-    num_of_tasks = 2
+    num_of_tasks = 5
     num_of_epochs = 10
     batch_size = 600 if dataset == 'mnist' else 50
 
