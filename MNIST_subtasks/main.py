@@ -3,6 +3,7 @@ import tensorflow as tf
 import numpy as np
 from keras.utils import to_categorical
 from dataset_preparation import get_dataset
+from help_functions import permute_images
 from plots import weights_heatmaps
 from superposition import normal_training_mnist, nn, plot_confusion_matrix, get_context_matrices, \
     superposition_training_cifar, plot_general
@@ -33,7 +34,7 @@ def get_test_acc_for_individual_tasks(final_model, context_matrices, test_data, 
     Use superimposed 'final_model' to test the accuracy for each individual task when weights of the 'final_model'
     are unfolded according to 'context_matrices' and tested on appropriate 'test_data'.
 
-    :param final_model: final model after superposition of all (50) tasks
+    :param final_model: final model after superposition of all tasks
     :param context_matrices: multidimensional numpy array with random context (binary superposition)
     :param test_data: [(X_test_1, y_test_1), (X_test_2, y_test_2), ...]
     :param X_test: all test data
@@ -54,7 +55,9 @@ def get_test_acc_for_individual_tasks(final_model, context_matrices, test_data, 
         # print('incorrect:', len(incorrect_indices), incorrect_indices)
 
         # testing
+        # task_predictions = final_model.predict(test_data[i][0])     # for different test data for every task (in case of 5 tasks of Permuting MNIST in function split_MNIST)
         task_predictions = final_model.predict(X_test)
+
         all_task_predictions.append(task_predictions)
 
         # weights_heatmaps([final_model.layers[2].get_weights()[0], final_model.layers[3].get_weights()[0]],
@@ -112,6 +115,8 @@ def all_tasks_inference(all_tasks_predictions, y_test):
         max_index = np.argmax(np.concatenate((a, b, c, d, e)))
         max_index = max_index % 10
 
+        # max_index = np.argmax(np.array(a) + np.array(b) + np.array(c) + np.array(d) + np.array(e))
+
         y = np.argmax(y_test[i])
         i += 1
 
@@ -144,27 +149,81 @@ def split_MNIST(model, X_train, y_train, X_test, y_test, input_size, num_of_unit
     :param batch_size: batch size - number of samples per gradient update
     :return: None
     """
+    '''
     # create 5 subtasks for MNIST ([0, 1], [2, 3], ..., [8, 9])
     d = []
     for i in range(0, 10, 2):
         X_train_extracted, y_train_extracted = extract_digits(X_train, y_train, [i, i + 1])  # extract only two digits
         X_test_extracted, y_test_extracted = extract_digits(X_test, y_test, [i, i + 1])  # extract only two digits
         d.append((X_train_extracted, y_train_extracted, X_test_extracted, y_test_extracted))
+    '''
+
+
+    # 5 tasks of Permuting MNIST with permuting X_test as well
+    d = [(X_train, y_train, X_test, y_test)]
+    for i in range(num_of_tasks - 1):
+        d.append((permute_images(X_train, i), y_train, permute_images(X_test, i), y_test))
+
 
     context_matrices = get_context_matrices(input_size, num_of_units, num_of_tasks)
     acc_superposition = superposition_training_cifar(model, d, num_of_epochs, num_of_tasks, context_matrices, nn_cnn, batch_size)
 
-    plot_general(acc_superposition, [], ['Superposition model', 'Baseline model'],
-                 'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
+    # plot_general(acc_superposition, [], ['Superposition model', 'Baseline model'],
+    #              'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
 
     test_data = np.array(d, dtype=object)[:, 2:]
+
+    task_identity_recognition(test_data, model, context_matrices)   # only for 5 tasks of Permuting MNIST
+
     sup_acc_per_task, all_tasks_predictions, _ = get_test_acc_for_individual_tasks(model, context_matrices, test_data, X_test)
     print('Accuracies for each task: ', sup_acc_per_task)
-    print('Global accuracy: ', global_accuracy(sup_acc_per_task, [2115, 2042, 1874, 1986, 1983]))  # for tasks in order [0,1] to [8,9]
+    # print('Global accuracy: ', global_accuracy(sup_acc_per_task, [2115, 2042, 1874, 1986, 1983]))  # for tasks in order [0,1] to [8,9]
 
     # show_confusion_matrix(model, X_test, y_test)
 
     all_tasks_inference(all_tasks_predictions, y_test)
+
+
+def task_identity_recognition(test_data, final_model, context_matrices):
+    """
+    In 5 Permuting MNIST tasks check if original and differently permuted samples can infer the right task identity.
+
+    :param test_data: [(X_test_1, y_test_1), (X_test_2, y_test_2), ...]
+    :param final_model: final model after superposition of all tasks
+    :param context_matrices: multidimensional numpy array with random context (binary superposition)
+    :return: None
+    """
+    i = 4   # task ID
+    for X_test, _ in [test_data[i]]:
+        preds = [final_model.predict(X_test)]
+        for index in range(4, 0, -1):
+            for layer_index, layer in enumerate(final_model.layers[1:]):  # first layer is Flatten so we skip it
+                context_inverse_multiplied = np.linalg.inv(np.diag(context_matrices[index][layer_index]))  # matrix inverse is not necessary for binary context
+                layer.set_weights([context_inverse_multiplied @ layer.get_weights()[0], layer.get_weights()[1]])
+
+            preds.append(final_model.predict(X_test))
+
+        wrong = 0
+        alll = 0
+        for sample_number in range(10000):
+            a = preds[4][sample_number]
+            b = preds[3][sample_number]
+            c = preds[2][sample_number]
+            d = preds[1][sample_number]
+            e = preds[0][sample_number]
+
+            max_index = np.argmax(np.concatenate((a, b, c, d, e)))
+            max_index = max_index // 10
+
+            alll += 1
+
+            if max_index != i:
+                wrong += 1
+                # print('i: ', i)
+                # print('max index: ', max_index)
+
+        print('\nwrong: ', wrong)
+        print('all: ', alll)
 
 
 def all_tasks_inference_one_vs_all(all_tasks_predictions, y_test):
@@ -343,20 +402,20 @@ if __name__ == '__main__':
     num_of_units = 1000
     num_of_classes = 10
 
-    num_of_tasks = 10
+    num_of_tasks = 5
     num_of_epochs = 10
     batch_size = 600
 
     X_train, y_train, X_test, y_test = get_dataset(dataset, nn_cnn, input_size, num_of_classes)
     model = nn(input_size, num_of_units, num_of_classes)
 
-    # split_MNIST(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks, num_of_epochs, batch_size)
+    split_MNIST(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks, num_of_epochs, batch_size)
 
     # wrong_indices = split_MNIST_one_vs_all(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks,
     #                        num_of_epochs, batch_size)
     # print('wrong_indices', len(wrong_indices), wrong_indices)
 
-    split_MNIST_ensemble(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks, num_of_epochs, batch_size)
+    # split_MNIST_ensemble(model, X_train, y_train, X_test, y_test, input_size, num_of_units, num_of_tasks, num_of_epochs, batch_size)
 
     '''
     X_train, y_train, X_test, y_test = get_dataset(dataset, nn_cnn, input_size, num_of_classes)
