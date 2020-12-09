@@ -193,8 +193,8 @@ def task_identity_recognition(test_data, final_model, context_matrices):
     :param context_matrices: multidimensional numpy array with random context (binary superposition)
     :return: None
     """
-    i = 4   # task ID
-    for X_test, _ in [test_data[i]]:
+    i = 0   # task ID
+    for X_test, _ in [test_data[i]]:    # only one run
         preds = [final_model.predict(X_test)]
         for index in range(4, 0, -1):
             for layer_index, layer in enumerate(final_model.layers[1:]):  # first layer is Flatten so we skip it
@@ -206,8 +206,8 @@ def task_identity_recognition(test_data, final_model, context_matrices):
         wrong = 0
         alll = 0
         for sample_number in range(10000):
-            a = preds[4][sample_number]
-            b = preds[3][sample_number]
+            a = preds[4][sample_number]     # first task prediction
+            b = preds[3][sample_number]     # second task prediction
             c = preds[2][sample_number]
             d = preds[1][sample_number]
             e = preds[0][sample_number]
