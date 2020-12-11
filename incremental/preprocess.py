@@ -15,7 +15,7 @@ def preprocess_SEA(path):
     y = []
     for line in lines:
         first, second, third, label = line.strip().split(',')
-        X.append([float(first), float(second), float(third)])
+        X.append([[float(first), float(second), float(third)]])
 
         label = [1, 0] if label == '0' else [0, 1]
         y.append(label)
@@ -54,7 +54,7 @@ def preprocess_Stagger(path):
     for i, line in enumerate(lines):
         if i >= 7:
             size, color, shape, label = line.strip().split(',')
-            X.append(d['size'][size] + d['color'][color] + d['shape'][shape])
+            X.append([d['size'][size] + d['color'][color] + d['shape'][shape]])
 
             label = [1, 0] if label == 'n' else [0, 1]
             y.append(label)
