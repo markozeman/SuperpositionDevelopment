@@ -37,7 +37,7 @@ def disjoint_datasets(X, y):
     for image, label in zip(X, y):
         index = int(floor(label[0] / 10))
         sets[index][0].append(image)
-        sets[index][1].append(to_categorical(label[0] % 10, 10))
+        sets[index][1].append(to_categorical(label[0] % 10, 10))    # change the last number here for using superfluous neurons
     return sets
 
 

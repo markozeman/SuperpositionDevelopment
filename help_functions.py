@@ -272,3 +272,28 @@ def orthogonal_contexts(vec_length, n):
     return contexts[:n]
 
 
+def insert_intermediate_layer_in_keras(model, layer_id, new_layer):
+    # function copied from:
+    # https://stackoverflow.com/questions/49492255/how-to-replace-or-insert-intermediate-layer-in-keras-model
+    """
+    Insert additional layer into the Keras model.
+
+    :param model: initial Keras model
+    :param layer_id: int - id of the layer where new layer will be inserted
+    :param new_layer: new layer we are adding
+    :return: new model with additional layer
+    """
+    from keras.models import Model
+
+    layers = [l for l in model.layers]
+
+    x = layers[0].output
+    for i in range(1, len(layers)):
+        if i == layer_id:
+            x = new_layer(x)
+        x = layers[i](x)
+
+    new_model = Model(input=layers[0].input, output=x)
+    return new_model
+
+

@@ -1,7 +1,8 @@
 import copy
+import numpy as np
 from math import exp
 from keras.callbacks import Callback
-import numpy as np
+from scipy.stats import entropy
 
 
 class TestPerformanceCallback(Callback):
@@ -32,6 +33,17 @@ class TestSuperpositionPerformanceCallback(Callback):
         self.model = model  # this is only a reference, not a deep copy
         self.task_index = task_index
         self.accuracies = []
+
+    # def on_batch_begin(self, batch, logs=None):
+    #     # Check the entropy of the batch and observe its trend.
+    #     print('batch: ', batch)
+    #     p = self.model.predict(self.X_test)
+    #
+    #     # sum entropy across all samples
+    #     ent = entropy(p[3])
+    #     print('ent:', ent)
+    #     # print(p[:3])
+    #     print()
 
     def on_epoch_begin(self, epoch, logs=None):
         if self.task_index == 0:    # first task (original MNIST images) - we did not use context yet

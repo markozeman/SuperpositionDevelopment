@@ -1,6 +1,7 @@
 from keras import Sequential
-from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
+from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Layer
 from keras.optimizers import Adam
+from keras.activations import get as get_keras_activation
 
 ## to enable always the same initialization of the networks
 from numpy.random import seed
@@ -51,5 +52,38 @@ def cnn(input_size, num_of_classes):
     model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
     model.summary()
     return model
+
+
+class CustomContextLayer(Layer):
+    def __init__(self, output_dimension, activation, **kwargs):
+        super(CustomContextLayer, self).__init__(**kwargs)
+        self.output_dimension = output_dimension
+        self.activation = get_keras_activation(activation)
+
+    def build(self, input_shape):
+        print('is: ', input_shape)
+
+        self.W = self.add_weight(
+            shape=(input_shape[-1], self.output_dimension),
+            # initializer="random_normal",
+            initializer="glorot_uniform",
+            trainable=True
+        )
+
+        self.b = self.add_weight(
+            shape=(self.output_dimension,),
+            # initializer="random_normal",
+            initializer="zeros",
+            trainable=True
+        )
+
+        super(CustomContextLayer, self).build(input_shape)
+
+    def call(self, inputs):
+        o = tensorflow.matmul(inputs, self.W) + self.b
+        return self.activation(o)
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.output_dimension)
 
 

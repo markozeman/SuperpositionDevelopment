@@ -114,7 +114,7 @@ def weights_heatmaps(W_matrices, labels, task_index):
 
     for layer_index, weights_matrix in enumerate(W_matrices):
         plt.subplot(*plot_layout, layer_index + 1)
-        sns.heatmap(weights_matrix, cmap='coolwarm', linewidth=0) if layer_index < 2 or layer_index > 4 \
+        sns.heatmap(weights_matrix, cmap='coolwarm', linewidth=0) if layer_index < 2 or layer_index > 3 \
                     else sns.heatmap(weights_matrix, cmap='Blues', linewidth=0)
         plt.title("Task %d || %s" % (task_index, labels[layer_index]))
     plt.tight_layout()
