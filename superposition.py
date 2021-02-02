@@ -1,6 +1,6 @@
 import tensorflow as tf
 import random
-from keras.callbacks import LearningRateScheduler
+from keras.callbacks import LearningRateScheduler, LambdaCallback
 from keras.layers import BatchNormalization
 from keras.models import load_model
 from callbacks import *
@@ -101,39 +101,65 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     :return: list of test accuracies for num_of_epochs epochs for each task
     """
 
-
+    ### Training contexts
     i = 0
-    permuted_images = permute_images(X_test, i)
     num_of_units = len(context_matrices[0][1])
-    model = load_model("saved_data/temp_model_%s.h5" % str(num_of_units))
+    model = load_model("saved_data/model_after1task_contextRandomlyFromMinusToPlus1_LearningContextOnSecondTaskLast2Layers_%s.h5" % str(num_of_units),
+                       custom_objects={'CustomContextLayer': CustomContextLayer})
+    # model = load_model("saved_data/model_after1task_%s.h5" % str(num_of_units))
     model.summary()
 
-    model = insert_intermediate_layer_in_keras(model, 1, CustomContextLayer(784, activation='relu'))
-    model = insert_intermediate_layer_in_keras(model, 4, CustomContextLayer(30, activation='relu'))
-    model = insert_intermediate_layer_in_keras(model, 6, Dense(30, activation='relu'))
+    # model = insert_intermediate_layer_in_keras(model, 1, CustomContextLayer(784, activation='linear'))
+    # model = insert_intermediate_layer_in_keras(model, 4, CustomContextLayer(num_of_units, activation='linear'))
+    # model = insert_intermediate_layer_in_keras(model, 6, CustomContextLayer(num_of_units, activation='linear'))
 
+    # set all custom layer's weight to 1 or randomly between -1 and 1
+    model.layers[2].set_weights([np.array([1 for _ in model.layers[2].get_weights()[0]])])
+    # model.layers[2].set_weights([np.array([random.uniform(-1, 1) for _ in model.layers[2].get_weights()[0]])])
+    # model.layers[4].set_weights([np.array([1 for _ in model.layers[4].get_weights()[0]])])
+    # model.layers[4].set_weights([np.array([random.uniform(-1, 1) for _ in model.layers[4].get_weights()[0]])])
+    # model.layers[6].set_weights([np.array([1 for _ in model.layers[6].get_weights()[0]])])
+
+    # custom layers not trainable
+    model.layers[2].trainable = False
+    model.layers[4].trainable = False
+    model.layers[6].trainable = False
+
+    # Dense layers not trainable
     model.layers[3].trainable = False
     model.layers[5].trainable = False
     model.layers[7].trainable = False
+
     model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+    # model.compile(optimizer=Adam(learning_rate=0.01), loss='categorical_crossentropy', metrics=['accuracy'])
     model.summary()
 
-    print('2', model.layers[2].get_weights()[0][:2, :2], model.layers[2].get_weights()[1].shape)
-    print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
-    print('4', model.layers[4].get_weights()[0][:2, :2], model.layers[4].get_weights()[1].shape)
-    print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
-    print('6', model.layers[6].get_weights()[0][:2, :2], model.layers[6].get_weights()[1].shape)
-    print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
+    print('Trainable layers:')
+    for inx, ly in enumerate(model.layers):
+        print(inx, ly.trainable)
 
-    model.fit(permuted_images, y_test, epochs=10, verbose=2)
+    print('Before')
+    print('2', model.layers[2].get_weights()[0][:10])
+    # print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
+    print('4', model.layers[4].get_weights()[0][:10])
+    # print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
+    print('6', model.layers[6].get_weights()[0][:10])
+    # print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
+
+    permuted_images = permute_images(X_train, i)
+    model.fit(permuted_images, y_train, epochs=100, verbose=2, validation_split=0.1,
+              callbacks=[PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model, context_matrices)])
+              # callbacks=[PrintDiscreteAccuracy(X_test, y_test, model, context_matrices)])
 
     print('After')
-    print('2', model.layers[2].get_weights()[0][:2, :2], model.layers[2].get_weights()[1].shape)
-    print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
-    print('4', model.layers[4].get_weights()[0][:2, :2], model.layers[4].get_weights()[1].shape)
-    print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
-    print('6', model.layers[6].get_weights()[0][:2, :2], model.layers[6].get_weights()[1].shape)
-    print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
+    print('2', model.layers[2].get_weights()[0][:10])
+    # print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
+    print('4', model.layers[4].get_weights()[0][:10])
+    # print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
+    print('6', model.layers[6].get_weights()[0][:10])
+    # print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
+
+    # model.save("saved_data/model_after1task_context1_LearningContextOnSecondTaskLast3Layers_1000.h5")
 
     return
 
@@ -153,7 +179,7 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     original_accuracies.extend(accuracies)
     print_validation_acc(history, 0)
 
-    # model.save("temp_model_1000.h5")
+    # model.save("model_after1task_1000.h5")
 
     # plot_weights_histogram(model.layers[3].get_weights()[0].flatten(), 30)
 
@@ -202,7 +228,7 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
             best_index, best_value = 0, 0
             best_l_0, best_l_1, best_l_2 = None, None, None
             for number_of_options in range(50):
-                model = load_model("temp_model_30.h5")
+                model = load_model("model_after1task_30.h5")
 
                 layer_0 = [random.randint(0, 783) for _ in range(10)]
                 layer_1 = random.randint(0, 29)
@@ -392,15 +418,28 @@ if __name__ == '__main__':
     # config.gpu_options.allow_growth = True
     # sess = tf.Session(config=config)
 
+    # to avoid CUBLAS_STATUS_ALLOC_FAILED error (https://stackoverflow.com/questions/41117740/tensorflow-crashes-with-cublas-status-alloc-failed)
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Currently, memory growth needs to be the same across GPUs
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            # print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            print(e)
+
     dataset = 'mnist'   # 'mnist' or 'cifar'
     nn_cnn = 'nn'      # 'nn' or 'cnn'
     input_size = (28, 28) if dataset == 'mnist' else (32, 32, 3)    # input sizes for MNIST and CIFAR images
-    num_of_units = 30
+    num_of_units = 1000
     num_of_classes = 10     # or number of neurons together with superfluous neurons for 'mnist'
     # (for 'cifar' change function disjoint_datasets in dataset_preparation.py)
 
-    num_of_tasks = 20
-    num_of_epochs = 10
+    num_of_tasks = 2
+    num_of_epochs = 100
     batch_size = 600 if dataset == 'mnist' else 50
 
     train_normal = False

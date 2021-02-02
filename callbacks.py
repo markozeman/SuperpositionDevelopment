@@ -180,3 +180,49 @@ def lr_scheduler(epoch, lr):
 
     return max(lr, 0.000001)    # don't let learning rate go to 0
 
+
+class PrintDiscreteAccuracy(Callback):
+    """
+    Callback class for printing discrete context accuracy while training (after every epoch).
+    Model has additional layers for factor -1 or 1 transformation.
+    """
+    def __init__(self, X_test, y_test, model, context_matrices):
+        super().__init__()
+        self.X_test = X_test
+        self.y_test = y_test
+        self.model = model  # this is only a reference, not a deep copy
+        self.context_matrices = context_matrices
+
+    def on_epoch_end(self, epoch, logs=None):
+        # save current custom layers' weights
+        l_2_old = self.model.layers[2].get_weights()
+        l_4_old = self.model.layers[4].get_weights()
+        l_6_old = self.model.layers[6].get_weights()
+
+        # discretize weights in custom layers
+        l_2 = [np.array([1 if x > 0 else -1 for x in self.model.layers[2].get_weights()[0]])]
+        l_4 = [np.array([1 if x > 0 else -1 for x in self.model.layers[4].get_weights()[0]])]
+        l_6 = [np.array([1 if x > 0 else -1 for x in self.model.layers[6].get_weights()[0]])]
+        self.model.layers[2].set_weights(l_2)
+        self.model.layers[4].set_weights(l_4)
+        self.model.layers[6].set_weights(l_6)
+
+        res = self.model.evaluate(self.X_test, self.y_test, verbose=0)
+        print("Discrete test accuracy (%):", round(res[1] * 100, 2))
+
+        # compare context between context_matrices and the learned contexts over all layers
+        learned_contexts = [l_2, l_4, l_6]
+        count = {'0': 0, '1': 0, '2': 0}
+        for ind in range(3):
+            # context_matrices[0], because we multiply with row 0 of context matrices in the method
+            # context_matrices[1], because we use the second ([1]) index to go from the first to the second task
+            for a, b in zip(self.context_matrices[1][ind], learned_contexts[ind][0]):
+                if a != b:
+                    count[str(ind)] += 1
+        print('Different context values count: ', count, '\n')
+
+        # set weights back to the pre-evaluation state
+        self.model.layers[2].set_weights(l_2_old)
+        self.model.layers[4].set_weights(l_4_old)
+        self.model.layers[6].set_weights(l_6_old)
+
