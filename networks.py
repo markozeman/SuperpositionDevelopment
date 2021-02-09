@@ -1,7 +1,7 @@
 import sys
 
 import numpy as np
-from keras import Sequential
+from keras import Sequential, initializers
 from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Layer
 from keras.optimizers import Adam
 from keras.activations import get as get_keras_activation
@@ -26,6 +26,8 @@ def nn(input_size, num_of_units, num_of_classes):
     """
     model = Sequential()
     model.add(Flatten(input_shape=input_size))
+    # initial = initializers.RandomNormal(stddev=0.1)
+    # model.add(Dense(num_of_units, activation='relu', kernel_initializer=initial))
     model.add(Dense(num_of_units, activation='relu'))
     model.add(Dense(num_of_units, activation='relu'))
     model.add(Dense(num_of_classes, activation='softmax'))
@@ -86,7 +88,7 @@ class CustomContextLayer(Layer):
             initializer="glorot_uniform",
             # initializer="random_normal",
             # initializer="zeros",
-            # regularizer=custom_regularizer_to_zero,
+            regularizer=custom_regularizer_to_zero,
             # constraint=tensorflow.keras.constraints.MinMaxNorm(min_value=-1.01, max_value=1.01, rate=0.00001, axis=0),
             trainable=True
         )
@@ -105,8 +107,8 @@ class CustomContextLayer(Layer):
         :return: output of this custom layer after activation function
         """
         # o = tensorflow.math.multiply(inputs, self.W)
-        o = tensorflow.math.multiply(inputs, sigmoid_from_minus1_to_1(self.W))
-        # o = tensorflow.math.multiply(inputs, factor_sigmoid_from_minus1_to_1(self.W))
+        # o = tensorflow.math.multiply(inputs, sigmoid_from_minus1_to_1(self.W))
+        o = tensorflow.math.multiply(inputs, factor_sigmoid_from_minus1_to_1(self.W))
 
         return self.activation(o)
 
@@ -175,7 +177,7 @@ def custom_regularizer_to_zero(x):
     :param x: tensor of weights, which we want to regularize
     :return: value of the loss for the custom layer
     """
-    return 0.00001 * tensorflow.reduce_sum(tensorflow.square(sigmoid_from_minus1_to_1(x)))
+    return 0.0001 * tensorflow.reduce_sum(tensorflow.square(sigmoid_from_minus1_to_1(x)))
 
 
 

@@ -1,4 +1,5 @@
 import copy
+import pickle
 import numpy as np
 from math import exp
 from keras.callbacks import Callback
@@ -192,6 +193,7 @@ class PrintDiscreteAccuracy(Callback):
         self.y_test = y_test
         self.model = model  # this is only a reference, not a deep copy
         self.context_matrices = context_matrices
+        self.last_context_values = self.context_matrices[0]     # start with random context values
 
     def on_epoch_end(self, epoch, logs=None):
         # save current custom layers' weights
@@ -213,13 +215,27 @@ class PrintDiscreteAccuracy(Callback):
         # compare context between context_matrices and the learned contexts over all layers
         learned_contexts = [l_2, l_4, l_6]
         count = {'0': 0, '1': 0, '2': 0}
+        count_context_epoch_change = {'0': 0, '1': 0, '2': 0}
         for ind in range(3):
             # context_matrices[0], because we multiply with row 0 of context matrices in the method
             # context_matrices[1], because we use the second ([1]) index to go from the first to the second task
             for a, b in zip(self.context_matrices[1][ind], learned_contexts[ind][0]):
                 if a != b:
                     count[str(ind)] += 1
+
+            # count how many bits of contexts changed in each layer from the last epoch
+            for a, b in zip(self.last_context_values[ind], learned_contexts[ind][0]):
+                if a != b:
+                    count_context_epoch_change[str(ind)] += 1
+
+        print('Context bit changes in each layer from the last epoch: ', count_context_epoch_change)
         print('Different context values count: ', count, '\n')
+
+        # update the context to the current epoch
+        self.last_context_values = np.array([l_2[0], l_4[0], l_6[0]])
+
+        # # save last contexts to use it later
+        # pickle.dump(self.last_context_values, open('last_contexts_30.pkl', 'wb'))
 
         # set weights back to the pre-evaluation state
         self.model.layers[2].set_weights(l_2_old)
