@@ -235,7 +235,7 @@ class PrintDiscreteAccuracy(Callback):
         self.last_context_values = np.array([l_2[0], l_4[0], l_6[0]])
 
         # # save last contexts to use it later
-        # pickle.dump(self.last_context_values, open('last_contexts_30.pkl', 'wb'))
+        # pickle.dump(self.last_context_values, open('saved_data/last_learned_contexts_1000.pkl', 'wb'))
 
         # set weights back to the pre-evaluation state
         self.model.layers[2].set_weights(l_2_old)

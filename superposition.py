@@ -104,91 +104,53 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     :return: list of test accuracies for num_of_epochs epochs for each task
     """
 
-    # history, _, accuracies = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size,
-    #                                      validation_share=0.1,
-    #                                      mode='superposition', context_matrices=context_matrices, task_index=0)
+    ### Training contexts
+    i = 0
+    num_of_units = len(context_matrices[0][1])
+    model = load_model("saved_data/model_after1task_%s_10epochs.h5" % str(num_of_units),
+                       custom_objects={'CustomContextLayer': CustomContextLayer})
+    model.summary()
 
-    # ### Training contexts
-    # i = 0
-    # num_of_units = len(context_matrices[0][1])
-    # model = load_model("saved_data/model_after1task_%s_100epochs.h5" % str(num_of_units),
-    #                    custom_objects={'CustomContextLayer': CustomContextLayer})
-    # model.summary()
-    #
-    # model = insert_intermediate_layer_in_keras(model, 1, CustomContextLayer(784, activation='linear'))
-    # model = insert_intermediate_layer_in_keras(model, 4, CustomContextLayer(num_of_units, activation='linear'))
-    # model = insert_intermediate_layer_in_keras(model, 6, CustomContextLayer(num_of_units, activation='linear'))
-    #
-    # '''
-    # # double custom layers
-    # model = insert_intermediate_layer_in_keras(model, 2, CustomContextLayer(784, activation='linear'))
-    # model = insert_intermediate_layer_in_keras(model, 5, CustomContextLayer(num_of_units, activation='linear'))
-    # model = insert_intermediate_layer_in_keras(model, 8, CustomContextLayer(num_of_units, activation='linear'))
-    #
-    # # triple custom layers
-    # model = insert_intermediate_layer_in_keras(model, 3, CustomContextLayer(784, activation='linear'))
-    # model = insert_intermediate_layer_in_keras(model, 6, CustomContextLayer(num_of_units, activation='linear'))
-    # model = insert_intermediate_layer_in_keras(model, 10, CustomContextLayer(num_of_units, activation='linear'))
-    #
-    # model.layers[5].trainable = False
-    # model.layers[9].trainable = False
-    # model.layers[13].trainable = False
-    # '''
-    #
-    # '''
-    # # set all custom layer's weight to 1 or randomly between -1 and 1
-    # model.layers[2].set_weights([np.array([1 for _ in model.layers[2].get_weights()[0]])])
-    # # model.layers[2].set_weights([np.array([random.uniform(-1, 1) for _ in model.layers[2].get_weights()[0]])])
-    # # model.layers[4].set_weights([np.array([1 for _ in model.layers[4].get_weights()[0]])])
-    # # model.layers[4].set_weights([np.array([random.uniform(-1, 1) for _ in model.layers[4].get_weights()[0]])])
-    # # model.layers[6].set_weights([np.array([1 for _ in model.layers[6].get_weights()[0]])])
-    #
-    # # custom layers not trainable
-    # model.layers[2].trainable = False
-    # model.layers[4].trainable = False
-    # model.layers[6].trainable = False
-    # '''
-    #
-    #
-    # # Dense layers not trainable
-    # model.layers[3].trainable = False
-    # model.layers[5].trainable = False
-    # model.layers[7].trainable = False
-    #
-    # model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
-    # # model.compile(optimizer=SGD(learning_rate=0.1), loss='categorical_crossentropy', metrics=['accuracy'])
-    # model.summary()
-    #
-    # print('Trainable layers:')
-    # for inx, ly in enumerate(model.layers):
-    #     print(inx, ly.trainable)
-    #
-    # '''
-    # print('Before')
-    # print('2', model.layers[2].get_weights()[0][:10])
+    model = insert_intermediate_layer_in_keras(model, 1, CustomContextLayer(784, activation='linear'))
+    model = insert_intermediate_layer_in_keras(model, 4, CustomContextLayer(num_of_units, activation='linear'))
+    model = insert_intermediate_layer_in_keras(model, 6, CustomContextLayer(num_of_units, activation='linear'))
+
+    # Dense layers not trainable
+    model.layers[3].trainable = False
+    model.layers[5].trainable = False
+    model.layers[7].trainable = False
+
+    model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+    model.summary()
+
+    print('Trainable layers:')
+    for inx, ly in enumerate(model.layers):
+        print(inx, ly.trainable)
+
+    '''
+    print('Before')
+    print('2', model.layers[2].get_weights()[0][:10])
+    print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
+    print('4', model.layers[4].get_weights()[0][:10])
+    print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
+    print('6', model.layers[6].get_weights()[0][:10])
+    print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
+    '''
+
+    permuted_images = permute_images(X_train, i)
+    model.fit(permuted_images, y_train, epochs=100, verbose=2, validation_split=0.1,
+              callbacks=[PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model, context_matrices)])
+
+    '''
+    print('After')
+    print('2', model.layers[2].get_weights()[0][:10])
     # print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
-    # print('4', model.layers[4].get_weights()[0][:10])
+    print('4', model.layers[4].get_weights()[0][:10])
     # print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
-    # print('6', model.layers[6].get_weights()[0][:10])
+    print('6', model.layers[6].get_weights()[0][:10])
     # print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
-    # '''
-    #
-    # permuted_images = permute_images(X_train, i)
-    # model.fit(permuted_images, y_train, epochs=100, verbose=2, validation_split=0.1,
-    #           callbacks=[PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model, context_matrices)])
-    #
-    # '''
-    # print('After')
-    # print('2', model.layers[2].get_weights()[0][:10])
-    # # print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
-    # print('4', model.layers[4].get_weights()[0][:10])
-    # # print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
-    # print('6', model.layers[6].get_weights()[0][:10])
-    # # print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
-    #
-    # # model.save("saved_data/model_after1task_context1_LearningContextOnSecondTaskLast3Layers_1000.h5")
-    # '''
-    # return
+    '''
+    return
 
 
 
@@ -207,13 +169,11 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     print_validation_acc(history, 0)
 
     # # use trained, learned contexts instead of random ones
-    # with open("saved_data/last_contexts_30.pkl", "rb") as f:
+    # with open("saved_data/last_learned_contexts_1000.pkl", "rb") as f:
     #     learned_contexts = pickle.load(f)
-    #
     # context_matrices[1] = learned_contexts
 
-
-    # model.save("model_after1task_1000.h5")
+    # model.save("saved_data/model_after1task_1000_10epochs.h5")
 
     # plot_weights_histogram(model.layers[3].get_weights()[0].flatten(), 30)
 
@@ -229,6 +189,14 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
 
         if nn_cnn == 'nn':
             W_before = model.layers[3].get_weights()[0]
+
+
+        # find the best context for the current task and use it instead of a random context
+
+
+        # context_matrices[1] = learned_contexts
+
+
 
         # multiply current weights with context matrices for each layer (without changing weights from bias node)
         if nn_cnn == 'nn':
@@ -468,12 +436,12 @@ if __name__ == '__main__':
     dataset = 'mnist'   # 'mnist' or 'cifar'
     nn_cnn = 'nn'      # 'nn' or 'cnn'
     input_size = (28, 28) if dataset == 'mnist' else (32, 32, 3)    # input sizes for MNIST and CIFAR images
-    num_of_units = 30
+    num_of_units = 1000
     num_of_classes = 10     # or number of neurons together with superfluous neurons for 'mnist'
     # (for 'cifar' change function disjoint_datasets in dataset_preparation.py)
 
     num_of_tasks = 2
-    num_of_epochs = 100
+    num_of_epochs = 10
     batch_size = 600 if dataset == 'mnist' else 50
 
     train_normal = False
