@@ -3,7 +3,7 @@ import random
 import pickle
 from keras.callbacks import LearningRateScheduler, LambdaCallback
 from keras.layers import BatchNormalization
-from keras.models import load_model
+from keras.models import load_model, clone_model
 from keras.optimizers import SGD
 
 from callbacks import *
@@ -105,53 +105,53 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     """
 
     ### Training contexts
-    i = 0
-    num_of_units = len(context_matrices[0][1])
-    model = load_model("saved_data/model_after1task_%s_10epochs.h5" % str(num_of_units),
-                       custom_objects={'CustomContextLayer': CustomContextLayer})
-    model.summary()
-
-    model = insert_intermediate_layer_in_keras(model, 1, CustomContextLayer(784, activation='linear'))
-    model = insert_intermediate_layer_in_keras(model, 4, CustomContextLayer(num_of_units, activation='linear'))
-    model = insert_intermediate_layer_in_keras(model, 6, CustomContextLayer(num_of_units, activation='linear'))
-
-    # Dense layers not trainable
-    model.layers[3].trainable = False
-    model.layers[5].trainable = False
-    model.layers[7].trainable = False
-
-    model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
-    model.summary()
-
-    print('Trainable layers:')
-    for inx, ly in enumerate(model.layers):
-        print(inx, ly.trainable)
-
-    '''
-    print('Before')
-    print('2', model.layers[2].get_weights()[0][:10])
-    print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
-    print('4', model.layers[4].get_weights()[0][:10])
-    print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
-    print('6', model.layers[6].get_weights()[0][:10])
-    print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
-    '''
-
-    permuted_images = permute_images(X_train, i)
-    model.fit(permuted_images, y_train, epochs=100, verbose=2, validation_split=0.1,
-              callbacks=[PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model, context_matrices)])
-
-    '''
-    print('After')
-    print('2', model.layers[2].get_weights()[0][:10])
+    # i = 0
+    # num_of_units = len(context_matrices[0][1])
+    # model = load_model("my_tmp_model_5.h5")
+    # # model = load_model("saved_data/model_after1task_%s_10epochs.h5" % str(num_of_units),
+    # #                    custom_objects={'CustomContextLayer': CustomContextLayer})
+    # model.summary()
+    #
+    # model = insert_intermediate_layer_in_keras(model, 1, CustomContextLayer(784, activation='linear'))
+    # model = insert_intermediate_layer_in_keras(model, 4, CustomContextLayer(num_of_units, activation='linear'))
+    # model = insert_intermediate_layer_in_keras(model, 6, CustomContextLayer(num_of_units, activation='linear'))
+    #
+    # # Dense layers not trainable
+    # model.layers[3].trainable = False
+    # model.layers[5].trainable = False
+    # model.layers[7].trainable = False
+    #
+    # model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+    # model.summary()
+    #
+    # print('Trainable layers:')
+    # for inx, ly in enumerate(model.layers):
+    #     print(inx, ly.trainable)
+    #
+    # '''
+    # print('Before')
+    # print('2', model.layers[2].get_weights()[0][:10])
     # print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
-    print('4', model.layers[4].get_weights()[0][:10])
+    # print('4', model.layers[4].get_weights()[0][:10])
     # print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
-    print('6', model.layers[6].get_weights()[0][:10])
+    # print('6', model.layers[6].get_weights()[0][:10])
     # print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
-    '''
-    return
-
+    # '''
+    #
+    # permuted_images = permute_images(X_train, i)
+    # model.fit(permuted_images, y_train, epochs=100, verbose=2, validation_split=0.1,
+    #           callbacks=[PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model, context_matrices)])
+    #
+    # '''
+    # print('After')
+    # print('2', model.layers[2].get_weights()[0][:10])
+    # # print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
+    # print('4', model.layers[4].get_weights()[0][:10])
+    # # print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
+    # print('6', model.layers[6].get_weights()[0][:10])
+    # # print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
+    # '''
+    # return
 
 
     original_accuracies = []
@@ -163,17 +163,14 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         W_before = model.layers[3].get_weights()[0]
 
     # first training task - original MNIST images
-    history, _, accuracies = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
-                                         mode='superposition', context_matrices=context_matrices, task_index=0)
-    original_accuracies.extend(accuracies)
-    print_validation_acc(history, 0)
+    # history, _, accuracies = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
+    #                                      mode='superposition', context_matrices=context_matrices, task_index=0)
+    # original_accuracies.extend(accuracies)
+    # print_validation_acc(history, 0)
 
-    # # use trained, learned contexts instead of random ones
-    # with open("saved_data/last_learned_contexts_1000.pkl", "rb") as f:
-    #     learned_contexts = pickle.load(f)
-    # context_matrices[1] = learned_contexts
 
-    # model.save("saved_data/model_after1task_1000_10epochs.h5")
+    # model.save("my_tmp_model_5.h5")
+
 
     # plot_weights_histogram(model.layers[3].get_weights()[0].flatten(), 30)
 
@@ -190,12 +187,42 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         if nn_cnn == 'nn':
             W_before = model.layers[3].get_weights()[0]
 
+        ### Find the best context for the current task and use it instead of a random context
+        learn_context = True
+        if learn_context:
+            num_of_units = len(context_matrices[0][1])
 
-        # find the best context for the current task and use it instead of a random context
+            # deep copy model into model_context
+            # model_context = clone_model(model)
+            # model_context.build((None, 784))
+            # model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+            # model_context.set_weights(model.get_weights())
+
+            model_context = load_model("my_tmp_model_5.h5")
+
+            # insert custom layers
+            model_context = insert_intermediate_layer_in_keras(model_context, 1, CustomContextLayer(784, activation='linear'))
+            model_context = insert_intermediate_layer_in_keras(model_context, 4, CustomContextLayer(num_of_units, activation='linear'))
+            model_context = insert_intermediate_layer_in_keras(model_context, 6, CustomContextLayer(num_of_units, activation='linear'))
+
+            # Dense layers not trainable
+            model_context.layers[3].trainable = False
+            model_context.layers[5].trainable = False
+            model_context.layers[7].trainable = False
+
+            model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+            model_context.summary()
+
+            callback_discrete_acc = PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model_context, context_matrices)
+            permuted_images = permute_images(X_train, i)
+            model_context.fit(permuted_images, y_train, epochs=100, verbose=2, validation_split=0.1,
+                              callbacks=[callback_discrete_acc])
+
+            # override random context with learned context
+            context_matrices[i + 1] = callback_discrete_acc.last_context_values
 
 
-        # context_matrices[1] = learned_contexts
-
+        model = load_model("my_tmp_model_5.h5")   # it's important we load model here!
 
 
         # multiply current weights with context matrices for each layer (without changing weights from bias node)
@@ -226,39 +253,39 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
                     context_matrices[i + 11][0][l_0_index] = -1 * context_matrices[i + 11][0][l_0_index]
                 context_matrices[i + 11][1][best_l_1] = -1 * context_matrices[i + 11][1][best_l_1]
                 context_matrices[i + 11][2][best_l_2] = -1 * context_matrices[i + 11][2][best_l_2]
-
+    
             best_index, best_value = 0, 0
             best_l_0, best_l_1, best_l_2 = None, None, None
             for number_of_options in range(50):
                 model = load_model("model_after1task_30.h5")
-
+    
                 layer_0 = [random.randint(0, 783) for _ in range(10)]
                 layer_1 = random.randint(0, 29)
                 layer_2 = random.randint(0, 29)
-
+    
                 # apply changes to contexts
                 for l_0_index in layer_0:
                     context_matrices[i + 11][0][l_0_index] = -1 * context_matrices[i + 11][0][l_0_index]
                 context_matrices[i + 11][1][layer_1] = -1 * context_matrices[i + 11][1][layer_1]
                 context_matrices[i + 11][2][layer_2] = -1 * context_matrices[i + 11][2][layer_2]
-
+    
                 context_multiplication(model, context_matrices, i + 11, None)
-
+    
                 results = model.evaluate(permute_images(X_test, i), y_test, verbose=0)
                 print('index:' , number_of_options, 'test acc: ', round(results[1] * 100, 2))
-
+    
                 # save result if it's the best until now
                 if round(results[1] * 100, 2) > best_value:
                     best_value = round(results[1] * 100, 2)
                     best_index = number_of_options
                     best_l_0, best_l_1, best_l_2 = layer_0, layer_1, layer_2
-
+    
                 # reverse context
                 for l_0_index in layer_0:
                     context_matrices[i + 11][0][l_0_index] = -1 * context_matrices[i + 11][0][l_0_index]
                 context_matrices[i + 11][1][layer_1] = -1 * context_matrices[i + 11][1][layer_1]
                 context_matrices[i + 11][2][layer_2] = -1 * context_matrices[i + 11][2][layer_2]
-
+    
             print('BEST: ', best_index, best_value)
             print(best_l_0, best_l_1, best_l_2, '\n')
             round_index += 1
@@ -276,22 +303,22 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
             # all_changing_neurons = 784 + 2 * num_of_units
             # lyr = np.random.choice(np.arange(0, 3),
             #                        p=[784 / all_changing_neurons, num_of_units / all_changing_neurons, num_of_units / all_changing_neurons])
-
+    
             lyr = random.randint(0, 2)  # evenly distributed 0, 1 or 2
             nrn = random.randint(0, num_of_units - 1) if lyr > 0 else random.randint(0, 783)
-
+    
             # apply change to contexts
             context_matrices[i + 11][lyr][nrn] = -1 * context_matrices[i + 11][lyr][nrn]
-
+    
             context_multiplication(model, context_matrices, i + 11)
-
+    
             results = model.evaluate(permuted_images, y_test, verbose=0)
             acc = round(results[1] * 100, 2)
             print('round index:', round_index, 'test acc: ', acc)
-
+    
             # revert model weights back
             context_multiplication(model, context_matrices, i + 11)
-
+    
             # save result if it's the best until now
             if acc > best_acc:
                 best_acc = acc
@@ -301,7 +328,7 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
                 np.save('best_context_vectors_%s.npy' % str(num_of_units), context_matrices[i + 11])
             else:  # reverse context
                 context_matrices[i + 11][lyr][nrn] = -1 * context_matrices[i + 11][lyr][nrn]
-
+    
             round_index += 1
         
         
@@ -436,12 +463,12 @@ if __name__ == '__main__':
     dataset = 'mnist'   # 'mnist' or 'cifar'
     nn_cnn = 'nn'      # 'nn' or 'cnn'
     input_size = (28, 28) if dataset == 'mnist' else (32, 32, 3)    # input sizes for MNIST and CIFAR images
-    num_of_units = 1000
+    num_of_units = 30
     num_of_classes = 10     # or number of neurons together with superfluous neurons for 'mnist'
     # (for 'cifar' change function disjoint_datasets in dataset_preparation.py)
 
     num_of_tasks = 2
-    num_of_epochs = 10
+    num_of_epochs = 100
     batch_size = 600 if dataset == 'mnist' else 50
 
     train_normal = False
@@ -490,6 +517,6 @@ if __name__ == '__main__':
     plot_general(acc_superposition, [], ['Superposition model', 'Baseline model'],
                  'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
 
-    # plot_general(acc_superposition, acc_normal, ['Superposition model', 'Baseline model'],
+    # plot_general([], acc_normal, ['Superposition model', 'Baseline model'],
     #                  'Superposition vs. baseline model with ' + nn_cnn.upper() + ' model', 'Epoch', 'Accuracy (%)', [10], 0, 100)
 
