@@ -1,5 +1,5 @@
 import numpy as np
-
+from tensorflow.keras.models import Model
 from plots import plot_many_lines
 
 seeds = [(i * 7) + 1 for i in range(3000)]    # random seeds for permutations, but remain the same each run (range is the maximum number of tasks)
@@ -272,20 +272,18 @@ def orthogonal_contexts(vec_length, n):
     return contexts[:n]
 
 
-def insert_intermediate_layer_in_keras(model, layer_id, new_layer):
+def insert_intermediate_layer_in_keras(my_model, layer_id, new_layer):
     # function copied from:
     # https://stackoverflow.com/questions/49492255/how-to-replace-or-insert-intermediate-layer-in-keras-model
     """
     Insert additional layer into the Keras model.
 
-    :param model: initial Keras model
+    :param my_model: initial Keras model
     :param layer_id: int - id of the layer where new layer will be inserted
     :param new_layer: new layer we are adding
     :return: new model with additional layer
     """
-    from keras.models import Model
-
-    layers = [l for l in model.layers]
+    layers = [l for l in my_model.layers]
 
     x = layers[0].output
     for i in range(1, len(layers)):
@@ -293,7 +291,7 @@ def insert_intermediate_layer_in_keras(model, layer_id, new_layer):
             x = new_layer(x)
         x = layers[i](x)
 
-    new_model = Model(input=layers[0].input, output=x)
+    new_model = Model(inputs=layers[0].input, outputs=x)
     return new_model
 
 

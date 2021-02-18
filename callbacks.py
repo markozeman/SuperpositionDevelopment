@@ -2,7 +2,8 @@ import copy
 import pickle
 import numpy as np
 from math import exp
-from keras.callbacks import Callback
+# from keras.callbacks import Callback
+from tensorflow.keras.callbacks import Callback
 from scipy.stats import entropy
 
 
@@ -162,7 +163,7 @@ def lr_scheduler(epoch, lr):
     :param lr: current learning rate
     :return: new learning rate
     """
-    num_of_epochs = 10
+    num_of_epochs = 10  # todo
 
     global lr_over_time
     lr_over_time.append(lr)
@@ -219,9 +220,9 @@ class PrintDiscreteAccuracy(Callback):
         for ind in range(3):
             # context_matrices[0], because we multiply with row 0 of context matrices in the method
             # context_matrices[1], because we use the second ([1]) index to go from the first to the second task
-            for a, b in zip(self.context_matrices[1][ind], learned_contexts[ind][0]):
-                if a != b:
-                    count[str(ind)] += 1
+            # for a, b in zip(self.context_matrices[1][ind], learned_contexts[ind][0]):
+            #     if a != b:
+            #         count[str(ind)] += 1
 
             # count how many bits of contexts changed in each layer from the last epoch
             for a, b in zip(self.last_context_values[ind], learned_contexts[ind][0]):
@@ -229,7 +230,7 @@ class PrintDiscreteAccuracy(Callback):
                     count_context_epoch_change[str(ind)] += 1
 
         print('Context bit changes in each layer from the last epoch: ', count_context_epoch_change)
-        print('Different context values count: ', count, '\n')
+        # print('Different context values count: ', count, '\n')
 
         # update the context to the current epoch
         self.last_context_values = np.array([l_2[0], l_4[0], l_6[0]])

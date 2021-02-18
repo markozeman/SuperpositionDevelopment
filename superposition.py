@@ -1,16 +1,24 @@
 import tensorflow as tf
 import random
 import pickle
-from keras.callbacks import LearningRateScheduler, LambdaCallback
-from keras.layers import BatchNormalization
-from keras.models import load_model, clone_model
-from keras.optimizers import SGD
+# from keras.callbacks import LearningRateScheduler, LambdaCallback
+# from keras.engine.saving import model_from_json
+# from keras.layers import BatchNormalization
+# from keras.models import load_model, clone_model
+# from keras.optimizers import SGD
+# from keras import backend as K
+from tensorflow.keras.callbacks import LearningRateScheduler, LambdaCallback
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.models import load_model, clone_model
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras import backend as K
 
 from callbacks import *
 from help_functions import *
 from plots import *
 from networks import *
 from dataset_preparation import get_dataset
+import multiprocessing
 
 
 def train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size=32, validation_share=0.0,
@@ -103,57 +111,7 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     :param batch_size: batch size - number of samples per gradient update (default = 32)
     :return: list of test accuracies for num_of_epochs epochs for each task
     """
-
-    ### Training contexts
-    # i = 0
-    # num_of_units = len(context_matrices[0][1])
-    # model = load_model("my_tmp_model_5.h5")
-    # # model = load_model("saved_data/model_after1task_%s_10epochs.h5" % str(num_of_units),
-    # #                    custom_objects={'CustomContextLayer': CustomContextLayer})
-    # model.summary()
-    #
-    # model = insert_intermediate_layer_in_keras(model, 1, CustomContextLayer(784, activation='linear'))
-    # model = insert_intermediate_layer_in_keras(model, 4, CustomContextLayer(num_of_units, activation='linear'))
-    # model = insert_intermediate_layer_in_keras(model, 6, CustomContextLayer(num_of_units, activation='linear'))
-    #
-    # # Dense layers not trainable
-    # model.layers[3].trainable = False
-    # model.layers[5].trainable = False
-    # model.layers[7].trainable = False
-    #
-    # model.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
-    # model.summary()
-    #
-    # print('Trainable layers:')
-    # for inx, ly in enumerate(model.layers):
-    #     print(inx, ly.trainable)
-    #
-    # '''
-    # print('Before')
-    # print('2', model.layers[2].get_weights()[0][:10])
-    # print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
-    # print('4', model.layers[4].get_weights()[0][:10])
-    # print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
-    # print('6', model.layers[6].get_weights()[0][:10])
-    # print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
-    # '''
-    #
-    # permuted_images = permute_images(X_train, i)
-    # model.fit(permuted_images, y_train, epochs=100, verbose=2, validation_split=0.1,
-    #           callbacks=[PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model, context_matrices)])
-    #
-    # '''
-    # print('After')
-    # print('2', model.layers[2].get_weights()[0][:10])
-    # # print('3', model.layers[3].get_weights()[0][:2, :2], model.layers[3].get_weights()[1].shape)
-    # print('4', model.layers[4].get_weights()[0][:10])
-    # # print('5', model.layers[5].get_weights()[0][:2, :2], model.layers[5].get_weights()[1].shape)
-    # print('6', model.layers[6].get_weights()[0][:10])
-    # # print('7', model.layers[7].get_weights()[0][:2, :2], model.layers[7].get_weights()[1].shape)
-    # '''
-    # return
-
-
+    num_of_units = len(context_matrices[0][1])
     original_accuracies = []
     show_W_heatmaps = False
 
@@ -163,14 +121,12 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         W_before = model.layers[3].get_weights()[0]
 
     # first training task - original MNIST images
-    # history, _, accuracies = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
-    #                                      mode='superposition', context_matrices=context_matrices, task_index=0)
-    # original_accuracies.extend(accuracies)
-    # print_validation_acc(history, 0)
+    history, _, accuracies = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
+                                         mode='superposition', context_matrices=context_matrices, task_index=0)
+    original_accuracies.extend(accuracies)
+    print_validation_acc(history, 0)
 
-
-    # model.save("my_tmp_model_5.h5")
-
+    # model.save("my_tmp_model_3.h5")
 
     # plot_weights_histogram(model.layers[3].get_weights()[0].flatten(), 30)
 
@@ -190,15 +146,15 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         ### Find the best context for the current task and use it instead of a random context
         learn_context = True
         if learn_context:
-            num_of_units = len(context_matrices[0][1])
+            num_of_epochs_context = 10
 
             # deep copy model into model_context
-            # model_context = clone_model(model)
-            # model_context.build((None, 784))
-            # model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
-            # model_context.set_weights(model.get_weights())
+            model_context = clone_model(model)
+            model_context.build((None, 784))
+            model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+            model_context.set_weights(model.get_weights())
 
-            model_context = load_model("my_tmp_model_5.h5")
+            # model_context = load_model("my_tmp_model_3.h5")
 
             # insert custom layers
             model_context = insert_intermediate_layer_in_keras(model_context, 1, CustomContextLayer(784, activation='linear'))
@@ -213,17 +169,20 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
             model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
             model_context.summary()
 
+            # print(model_context.layers[6].get_weights())
+
             callback_discrete_acc = PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model_context, context_matrices)
             permuted_images = permute_images(X_train, i)
-            model_context.fit(permuted_images, y_train, epochs=100, verbose=2, validation_split=0.1,
+            model_context.fit(permuted_images, y_train, epochs=num_of_epochs_context, verbose=2, validation_split=0.1,
                               callbacks=[callback_discrete_acc])
+
+            # print(model_context.layers[6].get_weights())
 
             # override random context with learned context
             context_matrices[i + 1] = callback_discrete_acc.last_context_values
+            print('CM:', context_matrices[i + 1][2])
 
-
-        model = load_model("my_tmp_model_5.h5")   # it's important we load model here!
-
+        # model = load_model("my_tmp_model_3.h5")
 
         # multiply current weights with context matrices for each layer (without changing weights from bias node)
         if nn_cnn == 'nn':

@@ -1,7 +1,8 @@
 from collections import Counter
 import tensorflow as tf
 import numpy as np
-from keras.utils import to_categorical
+# from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 from dataset_preparation import get_dataset
 from help_functions import permute_images
 from plots import weights_heatmaps

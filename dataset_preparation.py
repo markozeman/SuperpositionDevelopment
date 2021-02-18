@@ -1,8 +1,9 @@
 from math import floor
-
-from keras.datasets import cifar100, mnist
+# from keras.datasets import cifar100, mnist
+# from keras.utils import to_categorical
+from tensorflow.keras.datasets import cifar100, mnist
+from tensorflow.keras.utils import to_categorical
 import numpy as np
-from keras.utils import to_categorical
 
 
 def get_CIFAR_100():

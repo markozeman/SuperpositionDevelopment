@@ -1,4 +1,5 @@
-from keras.utils import to_categorical
+# from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 from dataset_preparation import get_CIFAR_100
 from networks import cnn
 import numpy as np

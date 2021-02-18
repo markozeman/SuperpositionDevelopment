@@ -1,7 +1,11 @@
-from keras import Sequential, Model
-from keras.engine.saving import load_model
-from keras.layers import Dense
-from keras.optimizers import Adam
+# from keras import Sequential, Model
+# from keras.engine.saving import load_model
+# from keras.layers import Dense
+# from keras.optimizers import Adam
+from tensorflow.keras import Sequential, Model
+from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
 from sklearn.random_projection import GaussianRandomProjection
 import pickle
 import tensorflow as tf

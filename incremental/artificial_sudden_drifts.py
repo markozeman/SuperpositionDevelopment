@@ -1,7 +1,10 @@
-from keras import Sequential
-from keras.engine import InputLayer
-from keras.layers import Dense, Flatten
-from keras.optimizers import Adam
+# from keras import Sequential
+# from keras.engine import InputLayer
+# from keras.layers import Dense, Flatten
+# from keras.optimizers import Adam
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.optimizers import Adam
 from preprocess import preprocess_SEA, preprocess_Stagger
 from help_functions import random_binary_array, context_stats, get_context_matrices
 from plots import plot_general

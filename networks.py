@@ -1,10 +1,12 @@
-import sys
-
 import numpy as np
-from keras import Sequential, initializers
-from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Layer
-from keras.optimizers import Adam
-from keras.activations import get as get_keras_activation
+# from keras import Sequential, initializers
+# from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Layer
+# from keras.optimizers import Adam
+# from keras.activations import get as get_keras_activation
+from tensorflow.keras import Sequential, initializers
+from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Layer
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.activations import get as get_keras_activation
 
 ## to enable always the same initialization of the networks
 from numpy.random import seed
@@ -141,7 +143,7 @@ def sigmoid_from_minus1_to_1(x):
     :param x: input into the activation function
     :return: output value
     """
-    from keras import backend as K
+    from tensorflow.keras import backend as K
     return (K.sigmoid(x) * 2) - 1
 
 
