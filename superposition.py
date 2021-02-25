@@ -47,7 +47,8 @@ def train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, 
     elif nn_cnn == 'cnn':
         test_superposition_callback = TestSuperpositionPerformanceCallback_CNN(X_test, y_test, context_matrices, model, task_index)
 
-    callbacks = [lr_callback]
+    # callbacks = [lr_callback]
+    callbacks = []      # todo
     if mode == 'normal':
         callbacks.append(test_callback)
     elif mode == 'superposition':
@@ -55,6 +56,13 @@ def train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, 
 
     history = model.fit(X_train, y_train, epochs=num_of_epochs, batch_size=batch_size, verbose=2,
                         validation_split=validation_share, callbacks=callbacks)
+
+    # global lr_over_time
+    # plot_many_lines([lr_over_time], ['LR'], 'Learning rate through training epochs', 'epoch', 'learning rate')
+
+    # print('LRs:', test_superposition_callback.LR)
+    # plot_many_lines([test_superposition_callback.LR], ['LR'], 'Learning rate through training iterations', 'iteration', 'learning rate')
+
     return history, test_callback.accuracies, test_superposition_callback.accuracies
 
 
@@ -76,17 +84,27 @@ def normal_training_mnist(model, X_train, y_train, X_test, y_test, num_of_epochs
     """
     original_accuracies = []
 
+    # L_before = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
+
     # first training task - original MNIST images
     history, accuracies, _ = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1)
     original_accuracies.extend(accuracies)
     print_validation_acc(history, 0)
 
+    # L_after = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
+    # compare_weights_signs(L_before, L_after)
+
     # other training tasks - permuted MNIST data
     for i in range(num_of_tasks - 1):
         print("\n\n Task: %d \n" % (i + 1))
 
+        # L_before = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
+
         permuted_X_train = permute_images(X_train, i)
         history, accuracies, _ = train_model(model, permuted_X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1)
+
+        # L_after = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
+        # compare_weights_signs(L_before, L_after)
 
         original_accuracies.extend(accuracies)
         print_validation_acc(history, i + 1)
@@ -120,11 +138,16 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     if nn_cnn == 'nn':
         W_before = model.layers[3].get_weights()[0]
 
+    L_before = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
+
     # first training task - original MNIST images
     history, _, accuracies = train_model(model, X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
                                          mode='superposition', context_matrices=context_matrices, task_index=0)
     original_accuracies.extend(accuracies)
     print_validation_acc(history, 0)
+
+    L_after = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
+    compare_weights_signs(L_before, L_after)
 
     # model.save("my_tmp_model_3.h5")
 
@@ -144,7 +167,7 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
             W_before = model.layers[3].get_weights()[0]
 
         ### Find the best context for the current task and use it instead of a random context
-        learn_context = True
+        learn_context = False
         if learn_context:
             num_of_epochs_context = 10
 
@@ -169,20 +192,24 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
             model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
             model_context.summary()
 
-            # print(model_context.layers[6].get_weights())
+            # print(model_context.layers[6].get_weights()[0])
 
             callback_discrete_acc = PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model_context, context_matrices)
             permuted_images = permute_images(X_train, i)
             model_context.fit(permuted_images, y_train, epochs=num_of_epochs_context, verbose=2, validation_split=0.1,
                               callbacks=[callback_discrete_acc])
 
-            # print(model_context.layers[6].get_weights())
+            print_number_of_changed_context_signs(callback_discrete_acc.starting_context_values, callback_discrete_acc.last_context_values)
+
+            # print(model_context.layers[6].get_weights()[0])
 
             # override random context with learned context
             context_matrices[i + 1] = callback_discrete_acc.last_context_values
-            print('CM:', context_matrices[i + 1][2])
+            # print('CM:', context_matrices[i + 1][2])
 
         # model = load_model("my_tmp_model_3.h5")
+
+        # print('sums:', sum(context_matrices[1][0]), sum(context_matrices[1][1]), sum(context_matrices[1][2]))
 
         # multiply current weights with context matrices for each layer (without changing weights from bias node)
         if nn_cnn == 'nn':
@@ -294,9 +321,18 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         return
         '''
 
+        L_before = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
+
+        # weights_heatmaps([model.layers[3].get_weights()[0]], ['pred'], 1)
+
         permuted_X_train = permute_images(X_train, i)
         history, _, accuracies = train_model(model, permuted_X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
                                              mode='superposition', context_matrices=context_matrices, task_index=i + 1)
+
+        # weights_heatmaps([model.layers[3].get_weights()[0]], ['po'], 1)
+
+        L_after = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
+        compare_weights_signs(L_before, L_after)
 
         if nn_cnn == 'nn':
             W_after_training = model.layers[3].get_weights()[0]

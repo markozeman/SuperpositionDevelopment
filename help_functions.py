@@ -295,3 +295,38 @@ def insert_intermediate_layer_in_keras(my_model, layer_id, new_layer):
     return new_model
 
 
+def print_number_of_changed_context_signs(start, end):
+    """
+    Print the number of changed context signs in each custom layer.
+
+    :param start: starting signs
+    :param end: ending signs
+    :return: None
+    """
+    print()
+    for i in range(len(start)):
+        count = 0
+        for sign_start, sign_end in zip(start[i], end[i]):
+            if sign_start != sign_end:
+                count += 1
+        print('Custom layer %d: %d changed signs' % (i, count))
+    print()
+
+
+def compare_weights_signs(old, new):
+    """
+    Print the number of changed weight's signs in all layers during the training.
+
+    :param old: list of arrays of old signs before training
+    :param new: list of arrays of new signs after training
+    :return: None
+    """
+    print()
+    for i in range(len(old)):
+        count = 0
+        for sign_start, sign_end in zip(old[i].flatten(), new[i].flatten()):
+            if sign_start != sign_end:
+                count += 1
+        print('Dense layer %d: %d/%d changed signs' % (i + 1, count, len(old[i].flatten())))
+    print()
+

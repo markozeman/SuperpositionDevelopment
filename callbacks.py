@@ -1,6 +1,7 @@
 import copy
 import pickle
 import numpy as np
+import tensorflow.keras.backend as K
 from math import exp
 # from keras.callbacks import Callback
 from tensorflow.keras.callbacks import Callback
@@ -35,6 +36,7 @@ class TestSuperpositionPerformanceCallback(Callback):
         self.model = model  # this is only a reference, not a deep copy
         self.task_index = task_index
         self.accuracies = []
+        self.LR = []    # list of changing learning rates through learning
 
     # def on_batch_begin(self, batch, logs=None):
     #     # Check the entropy of the batch and observe its trend.
@@ -46,6 +48,36 @@ class TestSuperpositionPerformanceCallback(Callback):
     #     print('ent:', ent)
     #     # print(p[:3])
     #     print()
+
+    def lr_getter_Adam(self):
+        """
+        Get the value of the current learning rate with set Adam optimizer.
+
+        Adopted from:
+        https://stackoverflow.com/questions/48198031/how-to-add-variables-to-progress-bar-in-keras/48206009#48206009
+
+        :return: current learning rate
+        """
+        # get values
+        decay = self.model.optimizer.decay
+        lr = self.model.optimizer.lr
+        iters = self.model.optimizer.iterations     # only this variable should not be constant
+        beta_1 = self.model.optimizer.beta_1
+        beta_2 = self.model.optimizer.beta_2
+
+        # calculate
+        lr = lr * (1. / (1. + decay * K.cast(iters, K.dtype(decay))))
+        t = K.cast(iters, K.floatx()) + 1
+        lr_t = lr * (K.sqrt(1. - K.pow(beta_2, t)) / (1. - K.pow(beta_1, t)))
+        return np.float32(K.eval(lr_t))
+
+    def on_batch_begin(self, batch, logs=None):
+        self.LR.append(self.lr_getter_Adam())
+        # print('decay: ', self.model.optimizer.decay)
+        # print('iters: ', self.model.optimizer.iterations)
+        # print('beta_1: ', self.model.optimizer.beta_1)
+        # print('beta_2: ', self.model.optimizer.beta_2)
+        # print('\n')
 
     def on_epoch_begin(self, epoch, logs=None):
         if self.task_index == 0:    # first task (original MNIST images) - we did not use context yet
@@ -194,6 +226,9 @@ class PrintDiscreteAccuracy(Callback):
         self.y_test = y_test
         self.model = model  # this is only a reference, not a deep copy
         self.context_matrices = context_matrices
+        self.starting_context_values = np.array([[1 if x > 0 else -1 for x in self.model.layers[2].get_weights()[0]],
+                                                 [1 if x > 0 else -1 for x in self.model.layers[4].get_weights()[0]],
+                                                 [1 if x > 0 else -1 for x in self.model.layers[6].get_weights()[0]]])
         self.last_context_values = self.context_matrices[0]     # start with random context values
 
     def on_epoch_end(self, epoch, logs=None):
@@ -229,7 +264,8 @@ class PrintDiscreteAccuracy(Callback):
                 if a != b:
                     count_context_epoch_change[str(ind)] += 1
 
-        print('Context bit changes in each layer from the last epoch: ', count_context_epoch_change)
+        if epoch != 0:
+            print('Context bit changes in each layer from the last epoch: ', count_context_epoch_change)
         # print('Different context values count: ', count, '\n')
 
         # update the context to the current epoch
