@@ -71,8 +71,8 @@ class TestSuperpositionPerformanceCallback(Callback):
         lr_t = lr * (K.sqrt(1. - K.pow(beta_2, t)) / (1. - K.pow(beta_1, t)))
         return np.float32(K.eval(lr_t))
 
-    def on_batch_begin(self, batch, logs=None):
-        self.LR.append(self.lr_getter_Adam())
+    # def on_batch_begin(self, batch, logs=None):
+    #     self.LR.append(self.lr_getter_Adam())
         # print('decay: ', self.model.optimizer.decay)
         # print('iters: ', self.model.optimizer.iterations)
         # print('beta_1: ', self.model.optimizer.beta_1)
@@ -226,12 +226,16 @@ class PrintDiscreteAccuracy(Callback):
         self.y_test = y_test
         self.model = model  # this is only a reference, not a deep copy
         self.context_matrices = context_matrices
-        self.starting_context_values = np.array([[1 if x > 0 else -1 for x in self.model.layers[2].get_weights()[0]],
-                                                 [1 if x > 0 else -1 for x in self.model.layers[4].get_weights()[0]],
-                                                 [1 if x > 0 else -1 for x in self.model.layers[6].get_weights()[0]]])
+        self.starting_context_values = np.array([[1 if x > 0 else -1 for x in self.model.layers[1].get_weights()[0]],
+                                                 [1 if x > 0 else -1 for x in self.model.layers[3].get_weights()[0]],
+                                                 [1 if x > 0 else -1 for x in self.model.layers[5].get_weights()[0]]])
+        # self.starting_context_values = np.array([[1 if x > 0 else -1 for x in self.model.layers[2].get_weights()[0]],
+        #                                          [1 if x > 0 else -1 for x in self.model.layers[4].get_weights()[0]],
+        #                                          [1 if x > 0 else -1 for x in self.model.layers[6].get_weights()[0]]])
         self.last_context_values = self.context_matrices[0]     # start with random context values
 
     def on_epoch_end(self, epoch, logs=None):
+        '''
         # save current custom layers' weights
         l_2_old = self.model.layers[2].get_weights()
         l_4_old = self.model.layers[4].get_weights()
@@ -278,4 +282,52 @@ class PrintDiscreteAccuracy(Callback):
         self.model.layers[2].set_weights(l_2_old)
         self.model.layers[4].set_weights(l_4_old)
         self.model.layers[6].set_weights(l_6_old)
+        '''
 
+
+        # save current custom layers' weights
+        l_1_old = self.model.layers[1].get_weights()
+        l_3_old = self.model.layers[3].get_weights()
+        l_5_old = self.model.layers[5].get_weights()
+
+        # discretize weights in custom layers
+        l_1 = [np.array([1 if x > 0 else -1 for x in self.model.layers[1].get_weights()[0]])]
+        l_3 = [np.array([1 if x > 0 else -1 for x in self.model.layers[3].get_weights()[0]])]
+        l_5 = [np.array([1 if x > 0 else -1 for x in self.model.layers[5].get_weights()[0]])]
+        self.model.layers[1].set_weights(l_1)
+        self.model.layers[3].set_weights(l_3)
+        self.model.layers[5].set_weights(l_5)
+
+        res = self.model.evaluate(self.X_test, self.y_test, verbose=0)
+        print("Discrete test accuracy (%):", round(res[1] * 100, 2))
+
+        # compare context between context_matrices and the learned contexts over all layers
+        learned_contexts = [l_1, l_3, l_5]
+        count = {'0': 0, '1': 0, '2': 0}
+        count_context_epoch_change = {'0': 0, '1': 0, '2': 0}
+        for ind in range(3):
+            # context_matrices[0], because we multiply with row 0 of context matrices in the method
+            # context_matrices[1], because we use the second ([1]) index to go from the first to the second task
+            # for a, b in zip(self.context_matrices[1][ind], learned_contexts[ind][0]):
+            #     if a != b:
+            #         count[str(ind)] += 1
+
+            # count how many bits of contexts changed in each layer from the last epoch
+            for a, b in zip(self.last_context_values[ind], learned_contexts[ind][0]):
+                if a != b:
+                    count_context_epoch_change[str(ind)] += 1
+
+        if epoch != 0:
+            print('Context bit changes in each layer from the last epoch: ', count_context_epoch_change)
+        # print('Different context values count: ', count, '\n')
+
+        # update the context to the current epoch
+        self.last_context_values = np.array([l_1[0], l_3[0], l_5[0]])
+
+        # save last contexts to use it later
+        # pickle.dump(self.last_context_values, open('temp_learned_contexts_30_newnew.pkl', 'wb'))
+
+        # set weights back to the pre-evaluation state
+        self.model.layers[1].set_weights(l_1_old)
+        self.model.layers[3].set_weights(l_3_old)
+        self.model.layers[5].set_weights(l_5_old)

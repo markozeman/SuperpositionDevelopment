@@ -133,6 +133,8 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     original_accuracies = []
     show_W_heatmaps = False
 
+    # print('000', model.layers[3].get_weights()[0][:2, :2])
+
     # context_multiplication(model, context_matrices, 0)
 
     if nn_cnn == 'nn':
@@ -149,35 +151,77 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
     L_after = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
     compare_weights_signs(L_before, L_after)
 
-    # model.save("my_tmp_model_3.h5")
+    curr_w = {
+        '0': model.layers[1].get_weights(),
+        '1': model.layers[2].get_weights(),
+        '2': model.layers[3].get_weights()
+    }
+
+    # model.save_weights('my_tmp_weights.h5', save_format='h5')
+    # model.load_weights('my_tmp_weights.h5')
+
+    # model.save("my_tmp_model.h5")
+    # model = load_model("my_tmp_model.h5")
+
+    # print('aaa', model.layers[3].get_weights()[0][:2, :2])
+
+    # frifri = load_model("my_tmp_model.h5")
+    #
+    # print('bbb', frifri.layers[3].get_weights()[0][:2, :2])
+
 
     # plot_weights_histogram(model.layers[3].get_weights()[0].flatten(), 30)
 
-    if nn_cnn == 'nn':
-        W_after = model.layers[3].get_weights()[0]
-        W_diff = np.absolute(W_before - W_after)    # absolute difference of weight matrices before and after training
-        if show_W_heatmaps:
-            weights_heatmaps([W_before, W_after, W_diff], ['before 1st training', 'after 1st training', 'diff'], 0)
+    # if nn_cnn == 'nn':
+    #     W_after = model.layers[3].get_weights()[0]
+    #     W_diff = np.absolute(W_before - W_after)    # absolute difference of weight matrices before and after training
+    #     if show_W_heatmaps:
+    #         weights_heatmaps([W_before, W_after, W_diff], ['before 1st training', 'after 1st training', 'diff'], 0)
 
     # other training tasks - permuted MNIST data
     for i in range(num_of_tasks - 1):
         print("\n\n Task: %d \n" % (i + 1))
 
-        if nn_cnn == 'nn':
-            W_before = model.layers[3].get_weights()[0]
+        # if nn_cnn == 'nn':
+        #     W_before = model.layers[3].get_weights()[0]
 
         ### Find the best context for the current task and use it instead of a random context
-        learn_context = False
+        learn_context = True
         if learn_context:
             num_of_epochs_context = 10
 
+            model_context = Sequential()
+            model_context.add(Flatten(input_shape=input_size))
+            model_context.add(CustomContextLayer(784, activation='linear'))
+            model_context.add(Dense(num_of_units, activation='relu'))
+            model_context.add(CustomContextLayer(num_of_units, activation='linear'))
+            model_context.add(Dense(num_of_units, activation='relu'))
+            model_context.add(CustomContextLayer(num_of_units, activation='linear'))
+            model_context.add(Dense(num_of_classes, activation='softmax'))
+
+            model_context.layers[2].set_weights(curr_w['0'])
+            model_context.layers[4].set_weights(curr_w['1'])
+            model_context.layers[6].set_weights(curr_w['2'])
+
+            model_context.layers[2].trainable = False
+            model_context.layers[4].trainable = False
+            model_context.layers[6].trainable = False
+
+            model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
+            model_context.summary()
+
+            '''
             # deep copy model into model_context
             model_context = clone_model(model)
             model_context.build((None, 784))
             model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
             model_context.set_weights(model.get_weights())
 
-            # model_context = load_model("my_tmp_model_3.h5")
+            # model_context = load_model("my_tmp_model.h5")
+
+            # frifri = load_model("my_tmp_model.h5")
+
+            # print('model_context', model_context.layers[3].get_weights()[0][:2, :2])
 
             # insert custom layers
             model_context = insert_intermediate_layer_in_keras(model_context, 1, CustomContextLayer(784, activation='linear'))
@@ -191,8 +235,11 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
 
             model_context.compile(optimizer=Adam(learning_rate=0.0001), loss='categorical_crossentropy', metrics=['accuracy'])
             model_context.summary()
+            '''
 
             # print(model_context.layers[6].get_weights()[0])
+
+            # print('model_context 222', model_context.layers[7].get_weights()[0][:2, :2])
 
             callback_discrete_acc = PrintDiscreteAccuracy(permute_images(X_test, i), y_test, model_context, context_matrices)
             permuted_images = permute_images(X_train, i)
@@ -205,9 +252,18 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
 
             # override random context with learned context
             context_matrices[i + 1] = callback_discrete_acc.last_context_values
-            # print('CM:', context_matrices[i + 1][2])
+            print('CM:', context_matrices[i + 1][2])
 
-        # model = load_model("my_tmp_model_3.h5")
+
+            # import numpy
+            # numpy.save('my_con_tmp_10', callback_discrete_acc.last_context_values)
+
+        # print('ccc', model.layers[3].get_weights()[0][:2, :2])
+
+        # model = load_model("my_tmp_model.h5")
+        #
+        # import numpy
+        # context_matrices[i + 1] = numpy.load('my_con_tmp_10.npy', allow_pickle=True)
 
         # print('sums:', sum(context_matrices[1][0]), sum(context_matrices[1][1]), sum(context_matrices[1][2]))
 
@@ -324,6 +380,8 @@ def superposition_training_mnist(model, X_train, y_train, X_test, y_test, num_of
         L_before = [np.sign(model.layers[1].get_weights()[0]), np.sign(model.layers[2].get_weights()[0]), np.sign(model.layers[3].get_weights()[0])]
 
         # weights_heatmaps([model.layers[3].get_weights()[0]], ['pred'], 1)
+
+        # print('dddd', model.layers[3].get_weights()[0][:2, :2])
 
         permuted_X_train = permute_images(X_train, i)
         history, _, accuracies = train_model(model, permuted_X_train, y_train, X_test, y_test, num_of_epochs, nn_cnn, batch_size, validation_share=0.1,
